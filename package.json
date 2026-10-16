@@ -1,0 +1,68 @@
+{
+  "name": "kobook",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MPL-2.0",
+  "description": "A local-first article reader: text/file/URL import, reading, notes and highlights, bring-your-own-key model access, backup and offline use.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck:frontend": "tsc --noEmit",
+    "typecheck:tests": "tsc -p tests/tsconfig.json --noEmit",
+    "typecheck:base-tests": "tsc -p apps/reader-release/tsconfig.base-tests.json --noEmit",
+    "typecheck": "npm run typecheck:frontend && npm run typecheck:tests",
+    "test:unit": "node --import tsx --test \"tests/unit/*.test.ts\"",
+    "test:browser:byok": "node tests/byok-browser.mjs",
+    "test:browser:base": "node --import tsx apps/reader-release/tests/base-browser.mjs",
+    "test": "npm run typecheck && npm run test:unit",
+    "acceptance:base": "node apps/reader-release/acceptance-base.mjs",
+    "build:release": "node apps/reader-release/build.mjs",
+    "browser:install": "playwright install chromium",
+    "notices": "node scripts/third-party-notices.mjs",
+    "audit": "npm audit --registry=https://registry.npmjs.org",
+    "tls:fixture": "node scripts/tls-fixture.mjs"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "1.0.58",
+    "@mozilla/readability": "0.6.0",
+    "ai": "5.0.273",
+    "fastify": "5.12.5",
+    "jsdom": "29.0.0",
+    "mdast-util-to-string": "4.0.0",
+    "nanoid": "5.1.16",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5",
+    "vfile": "6.0.3",
+    "zod": "3.25.76",
+    "zustand": "5.0.15"
+  },
+  "devDependencies": {
+    "@types/jsdom": "30.0.0",
+    "@types/mdast": "4.0.4",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/unist": "3.0.3",
+    "@vitejs/plugin-react": "4.7.0",
+    "autoprefixer": "10.6.1",
+    "playwright": "1.64.0",
+    "postcss": "8.5.29",
+    "tailwindcss": "3.4.19",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vite": "6.4.4"
+  },
+  "engines": {
+    "node": "24.12.0",
+    "npm": "11.6.2"
+  },
+  "packageManager": "npm@11.6.2",
+  "overrides": {
+    "undici": "6.29.0"
+  }
+}

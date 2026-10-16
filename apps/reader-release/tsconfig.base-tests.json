@@ -1,0 +1,11 @@
+{
+  "extends": "../../tests/tsconfig.json",
+  "include": [
+    "./server.ts",
+    "./csp.ts",
+    "../../tests/**/*.ts",
+    "../../tests/**/*.tsx",
+    "../../server/src/**/*.ts",
+    "../../shared/contracts/**/*.ts"
+  ]
+}

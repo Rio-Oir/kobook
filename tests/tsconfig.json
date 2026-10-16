@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../server/src/**/*.ts",
+    "../shared/contracts/**/*.ts"
+  ]
+}

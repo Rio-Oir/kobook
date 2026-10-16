@@ -1,0 +1,57 @@
+# Line-ending and diff normalisation.
+#
+# Without this, the bytes a contributor sees depend on their `core.autocrlf`
+# setting: the same commit checks out as LF on Linux and CRLF on Windows. Two
+# things in this repository are sensitive to that:
+#
+#   - the acceptance run records a hash of `package-lock.json` as part of its
+#     evidence, and two machines would record different hashes for the same
+#     commit; and
+#   - the release build asserts that exactly one inline script is hashed into
+#     its CSP, and a hash taken over CRLF bytes is not the hash the browser
+#     computes over the LF bytes it receives.
+#
+# So: text files are stored and checked out as LF everywhere. The CSP assertion
+# also normalises CRLF defensively, because a `git archive` or an editor can
+# still hand it CRLF, but with this file in place that path should not be
+# reached.
+#
+# If your working copy was checked out before this file existed it may still
+# hold CRLF; `git add --renormalize .` rewrites the index to the normalised
+# form, and a fresh clone gets LF directly.
+* text=auto eol=lf
+
+# Explicitly binary. `text=auto` usually detects these, but naming them means a
+# future file in one of these formats cannot be silently mangled by a
+# line-ending conversion.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.gz binary
+*.tgz binary
+*.pdf binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.wasm binary
+*.mp4 binary
+
+# GitHub language statistics: the generated third-party notice texts are not
+# this repository's source, and the lockfile is generated. Marking them here
+# affects only how a repository host counts languages — not how git shows a
+# diff for them.
+package-lock.json linguist-generated
+licenses/** linguist-vendored
+
+# Preserve third-party notice bytes and the official license verbatim.
+licenses/** -text -whitespace
+LICENSE -text

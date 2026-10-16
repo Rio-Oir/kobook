@@ -1,0 +1,565 @@
+/* SPDX-License-Identifier: MPL-2.0
+   This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme variables — single-axis design.
+ *
+ * Four palettes, one set of tokens, applied to the entire page:
+ *   - light: near-white reading surface (not "washed-out sepia")
+ *   - dark : near-black background, warm white text (default)
+ *   - sepia: warm cream, the classic e-reader tone
+ *   - paper: cooler, darker oatmeal — deliberately pulled away from sepia
+ *
+ * `<html data-theme="...">` is the single source of truth. The
+ * inline bootstrap script in `index.html` sets it before React
+ * mounts so the first paint is already the right colours (no flash
+ * of the wrong palette). The `Theme` store writes the same attribute
+ * on every change. `system` resolves to light/dark against
+ * `prefers-color-scheme` (see `lib/theme.ts`).
+ *
+ * ## Depth model
+ *
+ * Reading surface `--bg` is the brightest plane; chrome `--surface`
+ * sits a shade below it and `--surface2` a shade below that. This is
+ * the Kindle "the whole page is paper" model, and it matches Material
+ * 3's light-theme tonal elevation (higher container = darker). The
+ * steps are deliberately small (≈1.12–1.6:1) — a large jump makes
+ * cards compete with the text for attention, which is the opposite of
+ * what a reader wants. Because the steps are small, separation is
+ * carried by `--border` as a hairline, not by the fill difference
+ * alone.
+ *
+ * Two rules the previous palette broke and this one keeps:
+ *   - **the input/chrome hierarchy never inverts**: a control is
+ *     drawn on `--surface2` (a recess), never on `--bg` inside a
+ *     `--surface` panel. Inverting it makes the field look like a
+ *     hole punched through to the page.
+ *   - **one depth signal per region**: either a fill step or a
+ *     border, not both at full strength.
+ *
+ * ## Two border tokens
+ *
+ * `--border` is a decorative hairline (dividers, card outlines) and
+ * may sit at ~1.3:1. `--outline` is a *control* boundary, which WCAG
+ * 1.4.11 requires to reach 3:1, so text inputs and selects use it
+ * instead. Material 3 splits these the same way (`outline-variant`
+ * vs `outline`).
+ *
+ * ## Channel triplets
+ *
+ * Colours are space-separated RGB triplets (`--bg: 251 250 247`), not
+ * hex, because Tailwind v3 composes `bg-gloss-bg/80` through an
+ * `rgb(... / <alpha-value>)` template; a raw hex or `var()` value
+ * cannot receive that alpha and the opacity variant would silently
+ * generate no rule at all.
+ */
+@layer base {
+  :root,
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --bg: 12 12 12;
+    --surface: 22 22 22;
+    --surface2: 30 30 30;
+    --border: 42 42 42;
+    --outline: 110 107 102;
+    --text: 235 233 230;
+    --textDim: 160 157 151;
+    --accent: 240 110 98;
+    --highlight: 240 198 116;
+    /* Alpha scalars for places that tint a channel triplet directly. */
+    --code-alpha: 0.18;
+    /* Highlight swatch colours, tuned so a low-alpha wash stays
+     * legible behind body text on this background. */
+    --hl-yellow: 220 180 60;
+    --hl-green: 100 180 80;
+    --hl-blue: 80 150 220;
+    --hl-red: 220 100 90;
+    --hl-mark-alpha: 0.28;
+    --hl-line-alpha: 0.95;
+  }
+
+  [data-theme="light"] {
+    color-scheme: light;
+    --bg: 251 250 247;
+    --surface: 241 238 232;
+    --surface2: 231 227 219;
+    --border: 222 218 210;
+    --outline: 143 139 131;
+    --text: 24 23 21;
+    --textDim: 100 96 90;
+    --accent: 187 60 47;
+    --highlight: 217 165 46;
+    --code-alpha: 0.12;
+    --hl-yellow: 245 200 40;
+    --hl-green: 120 200 90;
+    --hl-blue: 90 170 240;
+    --hl-red: 240 120 110;
+    --hl-mark-alpha: 0.35;
+  }
+
+  [data-theme="sepia"] {
+    color-scheme: light;
+    --bg: 246 239 222;
+    --surface: 236 227 206;
+    --surface2: 225 215 192;
+    --border: 212 201 176;
+    --outline: 138 116 97;
+    --text: 74 58 44;
+    --textDim: 108 90 72;
+    --accent: 156 66 40;
+    --highlight: 217 165 46;
+    --code-alpha: 0.16;
+    --hl-yellow: 245 200 40;
+    --hl-green: 120 200 90;
+    --hl-blue: 90 170 240;
+    --hl-red: 240 120 110;
+    --hl-mark-alpha: 0.35;
+  }
+
+  [data-theme="paper"] {
+    color-scheme: light;
+    --bg: 232 224 206;
+    --surface: 221 212 192;
+    --surface2: 208 198 176;
+    --border: 192 180 156;
+    --outline: 122 110 90;
+    --text: 40 35 30;
+    --textDim: 90 78 64;
+    --accent: 150 60 44;
+    --highlight: 201 138 48;
+    --code-alpha: 0.14;
+    --hl-yellow: 245 200 40;
+    --hl-green: 120 200 90;
+    --hl-blue: 90 170 240;
+    --hl-red: 240 120 110;
+    --hl-mark-alpha: 0.35;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: rgb(var(--bg));
+    color: rgb(var(--text));
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  /* The live text selection is painted in the colour the *next*
+   * highlight will use, at the same alpha, so dragging a selection is
+   * a truthful preview of what a click on a swatch produces rather
+   * than a generic system highlight. `data-sel-color` is written on
+   * `<html>` by `App.tsx` from `store.highlightColor`.
+   *
+   * Yellow is the base rule so an unrecognised value degrades to the
+   * default colour instead of to no background at all. */
+  ::selection {
+    background: rgb(var(--hl-yellow) / var(--hl-mark-alpha));
+    color: rgb(var(--text));
+  }
+
+  html[data-sel-color="green"] ::selection {
+    background: rgb(var(--hl-green) / var(--hl-mark-alpha));
+  }
+  html[data-sel-color="blue"] ::selection {
+    background: rgb(var(--hl-blue) / var(--hl-mark-alpha));
+  }
+  html[data-sel-color="red"] ::selection {
+    background: rgb(var(--hl-red) / var(--hl-mark-alpha));
+  }
+}
+
+@layer components {
+  /* Article prose. The Reader page wraps the article in
+   * `.gloss-prose`; it inherits the theme variables from
+   * `<html data-theme>` because there is no separate reader palette.
+   */
+  .gloss-prose {
+    background: rgb(var(--bg));
+    color: rgb(var(--text));
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  .gloss-prose p {
+    font-family: "Newsreader", "Charter", "Georgia", "Noto Serif SC", "Songti SC", "SimSun", serif;
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: rgb(var(--text));
+    margin-bottom: 1.5rem;
+  }
+
+  .gloss-prose p:first-letter {
+    /* Drop cap not enabled, but reserved */
+  }
+
+  /* Inline code in prose */
+  .gloss-prose code {
+    font-family: "JetBrains Mono", "Menlo", monospace;
+    font-size: 0.875em;
+    background: rgb(var(--highlight) / var(--code-alpha));
+    padding: 0.125em 0.375em;
+    border-radius: 0.25rem;
+    color: rgb(var(--text));
+  }
+
+  /* ── Inline emphasis ───────────────────────────────────────────
+   * The parser records bold / italic / inline code / strikethrough /
+   * links as offsets onto the block's text, and the Reader renders them
+   * as the matching inline elements. Most of them need nothing here —
+   * `strong` keeps preflight's `font-weight: bolder`, and `em` and
+   * `del` keep their user-agent defaults (`italic`, `line-through`).
+   *
+   * Links are the exception and the reason this block exists: preflight
+   * sets `a { color: inherit; text-decoration: inherit }`, so without a
+   * rule of their own links would render as ordinary body text and a
+   * reader would have no way to tell a link from the words around it.
+   *
+   * Styling only — never a generated glyph. `rangeToOffsets` measures a
+   * selection with `Range.toString()`, so an arrow or a domain badge
+   * rendered here (including via `::after { content }`, which Chromium
+   * counts) would shift every stored highlight after it in the block.
+   * See `src/pages/Reader.tsx` and `src/lib/blocks.ts`.
+   */
+  .gloss-prose a {
+    color: rgb(var(--accent));
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.18em;
+    /* A pasted URL with no break opportunity would otherwise widen the
+     * whole column and push the layout sideways. */
+    overflow-wrap: anywhere;
+  }
+
+  .gloss-prose a:hover {
+    text-decoration-thickness: 0.12em;
+  }
+
+  /* Struck-through text is text the author retracted, so it recedes
+   * rather than competing with the surrounding prose. */
+  .gloss-prose del {
+    color: rgb(var(--textDim));
+  }
+
+  /* ── Block hierarchy ───────────────────────────────────────────
+   * The parse layer classifies every block and records heading depth;
+   * until now the Reader rendered all five kinds as the same `<p>`, so
+   * a Markdown document's structure was invisible on screen even though
+   * it was stored correctly. These rules are that missing half.
+   *
+   * ## The one rule every rule below obeys
+   *
+   * `rangeToOffsets` measures a selection as
+   * `Range.toString().length` over the block element, so **the text in
+   * a block must be exactly `paragraph.text` and nothing more**.
+   * Chromium *does* include `::before { content: … }` in
+   * `Range.toString()`, which rules out the obvious ways of drawing
+   * decoration inside a block:
+   *
+   *   - no generated list bullets (`content: "•"`) — `list-style`
+   *     is used instead, because `::marker` is not DOM text;
+   *   - no generated quote glyph, no heading anchor `#`, no
+   *     code-language badge rendered as text.
+   *
+   * Padding, margins, borders and background colour are all safe: they
+   * move glyphs around but add no characters. Anything that would add
+   * one belongs outside the block's element.
+   *
+   * `tests/unit/blocks.test.ts` pins the round trip per block kind, so
+   * a future decorative flourish fails a test rather than silently
+   * shifting every stored highlight.
+   *
+   * Tailwind's preflight zeroes heading sizes, list styles and block
+   * margins, so each of the following has to restate what it needs.
+   */
+
+  /* Headings. Depth reads from three signals at once — size, weight and
+   * the space above — because a single one is easy to miss while
+   * scrolling. `margin-top` deliberately exceeds `margin-bottom` so a
+   * heading groups with the text it introduces instead of floating
+   * between two sections. */
+  .gloss-prose h2,
+  .gloss-prose h3,
+  .gloss-prose h4,
+  .gloss-prose h5,
+  .gloss-prose h6 {
+    font-family: "Newsreader", "Charter", "Georgia", "Noto Serif SC", "Songti SC", "SimSun", serif;
+    color: rgb(var(--text));
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.005em;
+    margin-top: 2.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .gloss-prose h2 {
+    font-size: 1.55rem;
+    margin-top: 3rem;
+  }
+  .gloss-prose h3 {
+    font-size: 1.3rem;
+  }
+  .gloss-prose h4 {
+    font-size: 1.125rem;
+  }
+  .gloss-prose h5 {
+    font-size: 1rem;
+  }
+  .gloss-prose h6 {
+    font-size: 0.9375rem;
+    color: rgb(var(--textDim));
+  }
+
+  /* The article body's first block sits directly under the title, which
+   * already supplies the gap. */
+  .gloss-prose > :first-child {
+    margin-top: 0;
+  }
+
+  /* Lists. Preflight removes `list-style` outright, so it is restored
+   * here — and restored as `list-style`, not as a generated bullet,
+   * for the reason in the section comment. `list-style-position:
+   * outside` keeps the bullet in the gutter where it cannot land in the
+   * measured text. */
+  .gloss-prose ul,
+  .gloss-prose ol {
+    margin-bottom: 1.5rem;
+    /* The list itself is inset a little from the paragraph gutter, so
+     * nesting reads as a step in rather than as a floating block. */
+    padding-left: 0.75rem;
+  }
+
+  .gloss-prose ul {
+    list-style: disc outside;
+  }
+
+  .gloss-prose ol {
+    list-style: decimal outside;
+  }
+
+  .gloss-prose li {
+    font-family: "Newsreader", "Charter", "Georgia", "Noto Serif SC", "Songti SC", "SimSun", serif;
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: rgb(var(--text));
+    margin-bottom: 0.375rem;
+  }
+
+  /* A list item that carries a note shows the accent dot in the margin
+   * gutter. The bullet would land in the same 2rem gutter, so it steps
+   * aside rather than overlapping. */
+  .gloss-prose li[data-has-note] {
+    list-style: none;
+  }
+
+  /* Quotes. A rule in the gutter plus a dimmed colour — deliberately
+   * not italic, which for CJK is a synthesised oblique that costs
+   * legibility instead of adding emphasis. */
+  .gloss-prose blockquote {
+    border-left: 2px solid rgb(var(--border));
+    color: rgb(var(--textDim));
+    font-family: "Newsreader", "Charter", "Georgia", "Noto Serif SC", "Songti SC", "SimSun", serif;
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Nudge the paragraph number off the quote's rule. */
+  .gloss-prose blockquote > [data-paragraph-marker] {
+    left: 0.5rem;
+  }
+
+  /* Code blocks. The wrapper owns the outer spacing; the `<pre>` owns
+   * the box. Panning is horizontal rather than wrapping because
+   * wrapping code destroys indentation as a readability signal. */
+  .gloss-code {
+    margin-bottom: 1.5rem;
+  }
+
+  .gloss-prose .gloss-pre {
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    border-radius: 0.5rem;
+    padding: 0.875rem 1rem;
+    overflow-x: auto;
+    font-family: "JetBrains Mono", "Menlo", monospace;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: rgb(var(--text));
+    white-space: pre;
+    tab-size: 2;
+  }
+
+  /* Reset the inline-code pill inside a fenced block, or every line of
+   * code would carry its own tinted rounded background. */
+  .gloss-prose .gloss-pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  /* ── Highlights ────────────────────────────────────────────────
+   * A mark is ink on the page, never an opaque fill — the text on top
+   * keeps its normal colour and contrast. Whatever the shape, no
+   * padding, margin or border is added: any box change would reflow
+   * the text and invalidate every stored character offset.
+   *
+   * Colour and shape are orthogonal. `data-color` only resolves a
+   * channel triplet into `--mark-rgb`; `data-style` decides how that
+   * triplet is painted. So the palettes below stay theme-aware (the
+   * triplet comes from the theme block) while the shapes stay
+   * colour-agnostic.
+   *
+   * `box-decoration-break: clone` is what makes a mark that wraps
+   * across lines get its decorations on *every* fragment rather than
+   * having them straddle the break. It applies to backgrounds and to
+   * `text-decoration` alike, which is why none of the shapes need a
+   * per-line element.
+   */
+  .gloss-mark {
+    background: transparent;
+    color: inherit;
+    border-radius: 0.125rem;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  /* Colour → channel triplet. Nothing is painted here. */
+  .gloss-mark[data-color="yellow"] {
+    --mark-rgb: var(--hl-yellow);
+  }
+  .gloss-mark[data-color="green"] {
+    --mark-rgb: var(--hl-green);
+  }
+  .gloss-mark[data-color="blue"] {
+    --mark-rgb: var(--hl-blue);
+  }
+  .gloss-mark[data-color="red"] {
+    --mark-rgb: var(--hl-red);
+  }
+
+  /* ── Shape 1: watercolour ──────────────────────────────────────
+   * A stack of translucent layers of one colour. Where the layers
+   * overlap the wash pools darker, and the soft stops keep the edges
+   * from being a rectangle — the two things that separate a
+   * watercolour wash from a flat `background-color`.
+   *
+   * Every layer ends at `rgb(… / 0)` rather than the `transparent`
+   * keyword on purpose: `transparent` interpolates through
+   * transparent-*black* in sRGB, so a fade to it greys the middle of
+   * the gradient. Fading to the same colour at zero alpha keeps the
+   * hue.
+   */
+  .gloss-mark[data-style="watercolor"] {
+    background-image:
+      radial-gradient(
+        130% 90% at 6% 84%,
+        rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 1.3)) 0%,
+        rgb(var(--mark-rgb) / 0) 62%
+      ),
+      radial-gradient(
+        110% 80% at 78% 18%,
+        rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 1.05)) 0%,
+        rgb(var(--mark-rgb) / 0) 55%
+      ),
+      linear-gradient(
+        rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 0.5)) 0%,
+        rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 0.85)) 30%,
+        rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 0.85)) 72%,
+        rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 0.5)) 100%
+      );
+    background-size: 100% 100%;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+  }
+
+  /* ── Shape 2: straight line ────────────────────────────────────
+   * A rule along the baseline. Drawn with `text-decoration` rather
+   * than a background stripe so the browser places it where an
+   * underline belongs — a bottom-anchored background would sit on the
+   * inline box's descender line, which is font-metric dependent and
+   * lands too low for CJK. `skip-ink: none` keeps it unbroken through
+   * any glyph that would otherwise cut it.
+   */
+  .gloss-mark[data-style="line"] {
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-color: rgb(var(--mark-rgb) / var(--hl-line-alpha));
+    text-decoration-thickness: 0.11em;
+    text-underline-offset: 0.2em;
+    text-decoration-skip-ink: none;
+  }
+
+  /* ── Shape 3: curve ────────────────────────────────────────────
+   * The same rule, waved. `wavy` is a real sine along the baseline
+   * (not a repeating image), so it follows every line fragment of a
+   * wrapped mark for free and scales with `text-decoration-thickness`.
+   */
+  .gloss-mark[data-style="curve"] {
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: rgb(var(--mark-rgb) / var(--hl-line-alpha));
+    text-decoration-thickness: 0.1em;
+    text-underline-offset: 0.2em;
+    text-decoration-skip-ink: none;
+  }
+
+  /* Swatch buttons in the selection toolbar and the manage popover. */
+  .gloss-swatch[data-color="yellow"] {
+    background: rgb(var(--hl-yellow));
+  }
+  .gloss-swatch[data-color="green"] {
+    background: rgb(var(--hl-green));
+  }
+  .gloss-swatch[data-color="blue"] {
+    background: rgb(var(--hl-blue));
+  }
+  .gloss-swatch[data-color="red"] {
+    background: rgb(var(--hl-red));
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(var(--border));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--textDim));
+  }
+}
+
+/* Streaming cursor blink */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.streaming-cursor::after {
+  content: "▍";
+  display: inline-block;
+  margin-left: 1px;
+  color: rgb(var(--accent));
+  animation: blink 1s steps(1) infinite;
+}

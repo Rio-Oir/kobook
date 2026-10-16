@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-inline';
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+               font-src 'self' https://fonts.gstatic.com data:;
+               img-src 'self' data:;
+               connect-src 'self'
+                          https://r.jina.ai
+                          https://*.deepseek.com
+                          https://*.openai.com
+                          https://api.openai.com
+                          https://*.together.xyz
+                          https://api.together.xyz
+                          https://openrouter.ai
+                          http://localhost:*
+                          http://127.0.0.1:*;
+               base-uri 'self';
+               form-action 'self';"
+    />
+    <title>kobook 中文阅读器 · 选中文字，读懂疑问</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      // Theme bootstrap. Runs before React mounts so the first paint
+      // already has the right background and text colour. Reads the
+      // same zustand-persist envelope the store writes — see
+      // `src/lib/theme.ts` for the source of truth. The script is
+      // intentionally tiny: if anything goes wrong we leave the
+      // default `data-theme="dark"` attribute already on <html> and
+      // `App.tsx` will reconcile on mount.
+      (function () {
+        try {
+          var raw = localStorage.getItem("gloss-theme");
+          var theme = "dark";
+          if (raw) {
+            try {
+              var parsed = JSON.parse(raw);
+              if (parsed && parsed.state && parsed.state.theme) {
+                theme = parsed.state.theme;
+              }
+            } catch (e) {
+              // Corrupt blob: fall through to the default.
+            }
+          }
+          var resolved = theme;
+          if (theme === "system") {
+            if (typeof window.matchMedia === "function") {
+              resolved = window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+            } else {
+              resolved = "light";
+            }
+          }
+          document.documentElement.setAttribute("data-theme", resolved);
+          document.documentElement.style.colorScheme = resolved;
+        } catch (e) {
+          // localStorage can throw in privacy modes; the default
+          // attribute on <html> keeps the page readable.
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

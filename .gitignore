@@ -1,0 +1,46 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# build
+dist
+dist-ssr
+*.local
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# env
+.env*
+!.env.example
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+Thumbs.db
+
+# Generated build and test output.
+#
+# Everything a verification run writes lands here: the acceptance and browser
+# suites' logs, screenshots and fixtures, the synthetic Chromium profile, and
+# the local TLS fixtures the URL-importer tests generate. Set `EVIDENCE_DIR` to
+# write a run's evidence somewhere else (see `scripts/evidence-dir.mjs`); this
+# entry keeps the default location out of version control.
+artifacts/
+
+# Written by `apps/reader-release/build.mjs` beside the bundle it describes:
+# the file list and content hash of the offline shell it just emitted.
+apps/reader-release/build-manifest.json
