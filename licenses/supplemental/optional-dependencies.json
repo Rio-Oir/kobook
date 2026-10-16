@@ -1,0 +1,1983 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16",
+  "platformSnapshot": {
+    "platform": "win32/x64",
+    "note": "These packages were absent from node_modules on this machine, which is what put them in the review set. That is a snapshot of one platform, not a statement about any other: an npm install on the platform an entry targets installs exactly the version and integrity pinned here."
+  },
+  "reviewedCount": 75,
+  "purpose": "Registry-declared license, platform targeting and dependents for the lockfile entries not installed on the machine where the notices were generated, so the notice inventory can report them without network access. scripts/third-party-notices.mjs validates every record against package-lock.json — exact key, version, integrity, and the reviewed set — and fails on anything missing, duplicated or drifted.",
+  "source": "https://registry.npmjs.org/<name>/<version> (official registry, per-version document)",
+  "crossChecked": {
+    "against": "Independent second query of all 75 official registry per-version documents on 2026-10-16",
+    "licenseAndPlatformFieldsAgree": true
+  },
+  "packages": [
+    {
+      "lockfileKey": "node_modules/@esbuild/aix-ppc64",
+      "name": "@esbuild/aix-ppc64",
+      "version": "0.25.12",
+      "integrity": "sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==",
+      "optional": true,
+      "os": [
+        "aix"
+      ],
+      "cpu": [
+        "ppc64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/android-arm",
+      "name": "@esbuild/android-arm",
+      "version": "0.25.12",
+      "integrity": "sha512-VJ+sKvNA/GE7Ccacc9Cha7bpS8nyzVv0jdVgwNDaR4gDMC/2TTRc33Ip8qrNYUcpkOHUT5OZ0bUcNNVZQ9RLlg==",
+      "optional": true,
+      "os": [
+        "android"
+      ],
+      "cpu": [
+        "arm"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-VJ+sKvNA/GE7Ccacc9Cha7bpS8nyzVv0jdVgwNDaR4gDMC/2TTRc33Ip8qrNYUcpkOHUT5OZ0bUcNNVZQ9RLlg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/android-arm64",
+      "name": "@esbuild/android-arm64",
+      "version": "0.25.12",
+      "integrity": "sha512-6AAmLG7zwD1Z159jCKPvAxZd4y/VTO0VkprYy+3N2FtJ8+BQWFXU+OxARIwA46c5tdD9SsKGZ/1ocqBS/gAKHg==",
+      "optional": true,
+      "os": [
+        "android"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-6AAmLG7zwD1Z159jCKPvAxZd4y/VTO0VkprYy+3N2FtJ8+BQWFXU+OxARIwA46c5tdD9SsKGZ/1ocqBS/gAKHg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/android-x64",
+      "name": "@esbuild/android-x64",
+      "version": "0.25.12",
+      "integrity": "sha512-5jbb+2hhDHx5phYR2By8GTWEzn6I9UqR11Kwf22iKbNpYrsmRB18aX/9ivc5cabcUiAT/wM+YIZ6SG9QO6a8kg==",
+      "optional": true,
+      "os": [
+        "android"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-5jbb+2hhDHx5phYR2By8GTWEzn6I9UqR11Kwf22iKbNpYrsmRB18aX/9ivc5cabcUiAT/wM+YIZ6SG9QO6a8kg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/darwin-arm64",
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.25.12",
+      "integrity": "sha512-N3zl+lxHCifgIlcMUP5016ESkeQjLj/959RxxNYIthIg+CQHInujFuXeWbWMgnTo4cp5XVHqFPmpyu9J65C1Yg==",
+      "optional": true,
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-N3zl+lxHCifgIlcMUP5016ESkeQjLj/959RxxNYIthIg+CQHInujFuXeWbWMgnTo4cp5XVHqFPmpyu9J65C1Yg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/darwin-x64",
+      "name": "@esbuild/darwin-x64",
+      "version": "0.25.12",
+      "integrity": "sha512-HQ9ka4Kx21qHXwtlTUVbKJOAnmG1ipXhdWTmNXiPzPfWKpXqASVcWdnf2bnL73wgjNrFXAa3yYvBSd9pzfEIpA==",
+      "optional": true,
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-HQ9ka4Kx21qHXwtlTUVbKJOAnmG1ipXhdWTmNXiPzPfWKpXqASVcWdnf2bnL73wgjNrFXAa3yYvBSd9pzfEIpA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/freebsd-arm64",
+      "name": "@esbuild/freebsd-arm64",
+      "version": "0.25.12",
+      "integrity": "sha512-gA0Bx759+7Jve03K1S0vkOu5Lg/85dou3EseOGUes8flVOGxbhDDh/iZaoek11Y8mtyKPGF3vP8XhnkDEAmzeg==",
+      "optional": true,
+      "os": [
+        "freebsd"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-gA0Bx759+7Jve03K1S0vkOu5Lg/85dou3EseOGUes8flVOGxbhDDh/iZaoek11Y8mtyKPGF3vP8XhnkDEAmzeg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/freebsd-x64",
+      "name": "@esbuild/freebsd-x64",
+      "version": "0.25.12",
+      "integrity": "sha512-TGbO26Yw2xsHzxtbVFGEXBFH0FRAP7gtcPE7P5yP7wGy7cXK2oO7RyOhL5NLiqTlBh47XhmIUXuGciXEqYFfBQ==",
+      "optional": true,
+      "os": [
+        "freebsd"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-TGbO26Yw2xsHzxtbVFGEXBFH0FRAP7gtcPE7P5yP7wGy7cXK2oO7RyOhL5NLiqTlBh47XhmIUXuGciXEqYFfBQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-arm",
+      "name": "@esbuild/linux-arm",
+      "version": "0.25.12",
+      "integrity": "sha512-lPDGyC1JPDou8kGcywY0YILzWlhhnRjdof3UlcoqYmS9El818LLfJJc3PXXgZHrHCAKs/Z2SeZtDJr5MrkxtOw==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "arm"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-lPDGyC1JPDou8kGcywY0YILzWlhhnRjdof3UlcoqYmS9El818LLfJJc3PXXgZHrHCAKs/Z2SeZtDJr5MrkxtOw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-arm64",
+      "name": "@esbuild/linux-arm64",
+      "version": "0.25.12",
+      "integrity": "sha512-8bwX7a8FghIgrupcxb4aUmYDLp8pX06rGh5HqDT7bB+8Rdells6mHvrFHHW2JAOPZUbnjUpKTLg6ECyzvas2AQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-8bwX7a8FghIgrupcxb4aUmYDLp8pX06rGh5HqDT7bB+8Rdells6mHvrFHHW2JAOPZUbnjUpKTLg6ECyzvas2AQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-ia32",
+      "name": "@esbuild/linux-ia32",
+      "version": "0.25.12",
+      "integrity": "sha512-0y9KrdVnbMM2/vG8KfU0byhUN+EFCny9+8g202gYqSSVMonbsCfLjUO+rCci7pM0WBEtz+oK/PIwHkzxkyharA==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "ia32"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-0y9KrdVnbMM2/vG8KfU0byhUN+EFCny9+8g202gYqSSVMonbsCfLjUO+rCci7pM0WBEtz+oK/PIwHkzxkyharA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-loong64",
+      "name": "@esbuild/linux-loong64",
+      "version": "0.25.12",
+      "integrity": "sha512-h///Lr5a9rib/v1GGqXVGzjL4TMvVTv+s1DPoxQdz7l/AYv6LDSxdIwzxkrPW438oUXiDtwM10o9PmwS/6Z0Ng==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "loong64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-h///Lr5a9rib/v1GGqXVGzjL4TMvVTv+s1DPoxQdz7l/AYv6LDSxdIwzxkrPW438oUXiDtwM10o9PmwS/6Z0Ng==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-mips64el",
+      "name": "@esbuild/linux-mips64el",
+      "version": "0.25.12",
+      "integrity": "sha512-iyRrM1Pzy9GFMDLsXn1iHUm18nhKnNMWscjmp4+hpafcZjrr2WbT//d20xaGljXDBYHqRcl8HnxbX6uaA/eGVw==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "mips64el"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-iyRrM1Pzy9GFMDLsXn1iHUm18nhKnNMWscjmp4+hpafcZjrr2WbT//d20xaGljXDBYHqRcl8HnxbX6uaA/eGVw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-ppc64",
+      "name": "@esbuild/linux-ppc64",
+      "version": "0.25.12",
+      "integrity": "sha512-9meM/lRXxMi5PSUqEXRCtVjEZBGwB7P/D4yT8UG/mwIdze2aV4Vo6U5gD3+RsoHXKkHCfSxZKzmDssVlRj1QQA==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "ppc64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-9meM/lRXxMi5PSUqEXRCtVjEZBGwB7P/D4yT8UG/mwIdze2aV4Vo6U5gD3+RsoHXKkHCfSxZKzmDssVlRj1QQA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-riscv64",
+      "name": "@esbuild/linux-riscv64",
+      "version": "0.25.12",
+      "integrity": "sha512-Zr7KR4hgKUpWAwb1f3o5ygT04MzqVrGEGXGLnj15YQDJErYu/BGg+wmFlIDOdJp0PmB0lLvxFIOXZgFRrdjR0w==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "riscv64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-Zr7KR4hgKUpWAwb1f3o5ygT04MzqVrGEGXGLnj15YQDJErYu/BGg+wmFlIDOdJp0PmB0lLvxFIOXZgFRrdjR0w==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-s390x",
+      "name": "@esbuild/linux-s390x",
+      "version": "0.25.12",
+      "integrity": "sha512-MsKncOcgTNvdtiISc/jZs/Zf8d0cl/t3gYWX8J9ubBnVOwlk65UIEEvgBORTiljloIWnBzLs4qhzPkJcitIzIg==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "s390x"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-MsKncOcgTNvdtiISc/jZs/Zf8d0cl/t3gYWX8J9ubBnVOwlk65UIEEvgBORTiljloIWnBzLs4qhzPkJcitIzIg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/linux-x64",
+      "name": "@esbuild/linux-x64",
+      "version": "0.25.12",
+      "integrity": "sha512-uqZMTLr/zR/ed4jIGnwSLkaHmPjOjJvnm6TVVitAa08SLS9Z0VM8wIRx7gWbJB5/J54YuIMInDquWyYvQLZkgw==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-uqZMTLr/zR/ed4jIGnwSLkaHmPjOjJvnm6TVVitAa08SLS9Z0VM8wIRx7gWbJB5/J54YuIMInDquWyYvQLZkgw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/netbsd-arm64",
+      "name": "@esbuild/netbsd-arm64",
+      "version": "0.25.12",
+      "integrity": "sha512-xXwcTq4GhRM7J9A8Gv5boanHhRa/Q9KLVmcyXHCTaM4wKfIpWkdXiMog/KsnxzJ0A1+nD+zoecuzqPmCRyBGjg==",
+      "optional": true,
+      "os": [
+        "netbsd"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-xXwcTq4GhRM7J9A8Gv5boanHhRa/Q9KLVmcyXHCTaM4wKfIpWkdXiMog/KsnxzJ0A1+nD+zoecuzqPmCRyBGjg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/netbsd-x64",
+      "name": "@esbuild/netbsd-x64",
+      "version": "0.25.12",
+      "integrity": "sha512-Ld5pTlzPy3YwGec4OuHh1aCVCRvOXdH8DgRjfDy/oumVovmuSzWfnSJg+VtakB9Cm0gxNO9BzWkj6mtO1FMXkQ==",
+      "optional": true,
+      "os": [
+        "netbsd"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-Ld5pTlzPy3YwGec4OuHh1aCVCRvOXdH8DgRjfDy/oumVovmuSzWfnSJg+VtakB9Cm0gxNO9BzWkj6mtO1FMXkQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/openbsd-arm64",
+      "name": "@esbuild/openbsd-arm64",
+      "version": "0.25.12",
+      "integrity": "sha512-fF96T6KsBo/pkQI950FARU9apGNTSlZGsv1jZBAlcLL1MLjLNIWPBkj5NlSz8aAzYKg+eNqknrUJ24QBybeR5A==",
+      "optional": true,
+      "os": [
+        "openbsd"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-fF96T6KsBo/pkQI950FARU9apGNTSlZGsv1jZBAlcLL1MLjLNIWPBkj5NlSz8aAzYKg+eNqknrUJ24QBybeR5A==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/openbsd-x64",
+      "name": "@esbuild/openbsd-x64",
+      "version": "0.25.12",
+      "integrity": "sha512-MZyXUkZHjQxUvzK7rN8DJ3SRmrVrke8ZyRusHlP+kuwqTcfWLyqMOE3sScPPyeIXN/mDJIfGXvcMqCgYKekoQw==",
+      "optional": true,
+      "os": [
+        "openbsd"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-MZyXUkZHjQxUvzK7rN8DJ3SRmrVrke8ZyRusHlP+kuwqTcfWLyqMOE3sScPPyeIXN/mDJIfGXvcMqCgYKekoQw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/openharmony-arm64",
+      "name": "@esbuild/openharmony-arm64",
+      "version": "0.25.12",
+      "integrity": "sha512-rm0YWsqUSRrjncSXGA7Zv78Nbnw4XL6/dzr20cyrQf7ZmRcsovpcRBdhD43Nuk3y7XIoW2OxMVvwuRvk9XdASg==",
+      "optional": true,
+      "os": [
+        "openharmony"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-rm0YWsqUSRrjncSXGA7Zv78Nbnw4XL6/dzr20cyrQf7ZmRcsovpcRBdhD43Nuk3y7XIoW2OxMVvwuRvk9XdASg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/sunos-x64",
+      "name": "@esbuild/sunos-x64",
+      "version": "0.25.12",
+      "integrity": "sha512-3wGSCDyuTHQUzt0nV7bocDy72r2lI33QL3gkDNGkod22EsYl04sMf0qLb8luNKTOmgF/eDEDP5BFNwoBKH441w==",
+      "optional": true,
+      "os": [
+        "sunos"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-3wGSCDyuTHQUzt0nV7bocDy72r2lI33QL3gkDNGkod22EsYl04sMf0qLb8luNKTOmgF/eDEDP5BFNwoBKH441w==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/win32-arm64",
+      "name": "@esbuild/win32-arm64",
+      "version": "0.25.12",
+      "integrity": "sha512-rMmLrur64A7+DKlnSuwqUdRKyd3UE7oPJZmnljqEptesKM8wx9J8gx5u0+9Pq0fQQW8vqeKebwNXdfOyP+8Bsg==",
+      "optional": true,
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-rMmLrur64A7+DKlnSuwqUdRKyd3UE7oPJZmnljqEptesKM8wx9J8gx5u0+9Pq0fQQW8vqeKebwNXdfOyP+8Bsg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@esbuild/win32-ia32",
+      "name": "@esbuild/win32-ia32",
+      "version": "0.25.12",
+      "integrity": "sha512-HkqnmmBoCbCwxUKKNPBixiWDGCpQGVsrQfJoVGYLPT41XWF8lHuE5N6WhVia2n4o5QK5M4tYr21827fNhi4byQ==",
+      "optional": true,
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "ia32"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "208f539945b145e7c9d6d844290f81c3fe5af320",
+      "registryIntegrity": "sha512-HkqnmmBoCbCwxUKKNPBixiWDGCpQGVsrQfJoVGYLPT41XWF8lHuE5N6WhVia2n4o5QK5M4tYr21827fNhi4byQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.25.12",
+          "byLockfileKey": "node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.25.12"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@napi-rs/lzma-linux-x64-gnu",
+      "name": "@napi-rs/lzma-linux-x64-gnu",
+      "version": "1.5.1",
+      "integrity": "sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/Brooooooklyn/lzma.git",
+      "gitHead": "f164df92d83e095f195d628b1a68a141ae2eb638",
+      "registryIntegrity": "sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "1.5.1"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-android-arm-eabi",
+      "name": "@rollup/rollup-android-arm-eabi",
+      "version": "4.64.4",
+      "integrity": "sha512-7sdQKCYk/JCWa7rlXOgIa7AEAfZnUu/twNX4m4ECouPWsYhzxHfslKCFpOs43J8uux356TUU8NCuQus3XISCbQ==",
+      "optional": true,
+      "os": [
+        "android"
+      ],
+      "cpu": [
+        "arm"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-7sdQKCYk/JCWa7rlXOgIa7AEAfZnUu/twNX4m4ECouPWsYhzxHfslKCFpOs43J8uux356TUU8NCuQus3XISCbQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-android-arm64",
+      "name": "@rollup/rollup-android-arm64",
+      "version": "4.64.4",
+      "integrity": "sha512-iV5jlPMChTQgD0UCTcT9rLHN4DNce34v5Mw0IN7csTSg4RDaKq9AximXPL35k+sGXcfrR4OeQMvFNe+OmV1rhw==",
+      "optional": true,
+      "os": [
+        "android"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-iV5jlPMChTQgD0UCTcT9rLHN4DNce34v5Mw0IN7csTSg4RDaKq9AximXPL35k+sGXcfrR4OeQMvFNe+OmV1rhw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-darwin-arm64",
+      "name": "@rollup/rollup-darwin-arm64",
+      "version": "4.64.4",
+      "integrity": "sha512-a0Sswc+5v8BVkjHGOaJCTbFArZZUJCGFi2y39FWGdiplOToMNzr1tE4v3l67DW+vGyYD2sS5PfhDdUCyrr3mjA==",
+      "optional": true,
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-a0Sswc+5v8BVkjHGOaJCTbFArZZUJCGFi2y39FWGdiplOToMNzr1tE4v3l67DW+vGyYD2sS5PfhDdUCyrr3mjA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-darwin-x64",
+      "name": "@rollup/rollup-darwin-x64",
+      "version": "4.64.4",
+      "integrity": "sha512-qHH6RSwVPuNkqbOv0hgZKonHBW/ZIaHpd3bgH5LRPJ/8oRE+6Dl36OfS7wUQyeSeqQsAh1NrpwmUemgH1fh1WQ==",
+      "optional": true,
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-qHH6RSwVPuNkqbOv0hgZKonHBW/ZIaHpd3bgH5LRPJ/8oRE+6Dl36OfS7wUQyeSeqQsAh1NrpwmUemgH1fh1WQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-freebsd-arm64",
+      "name": "@rollup/rollup-freebsd-arm64",
+      "version": "4.64.4",
+      "integrity": "sha512-hs9CVjHH9WPGfeHZ5yvHYEiEm7hhm7M/16ytRTxrir7q+KnGaQ6EO1JYcrGooVIHYN1Z3H7sLIwxe97NNBYg6A==",
+      "optional": true,
+      "os": [
+        "freebsd"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-hs9CVjHH9WPGfeHZ5yvHYEiEm7hhm7M/16ytRTxrir7q+KnGaQ6EO1JYcrGooVIHYN1Z3H7sLIwxe97NNBYg6A==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-freebsd-x64",
+      "name": "@rollup/rollup-freebsd-x64",
+      "version": "4.64.4",
+      "integrity": "sha512-4UYtjV0FBOToshUTYvwoTbfvig9Ec94EcE56WehhqaFZK43rK9sLNYO+vRMnJ9GTOxanFkKB/IvBKt96VmCYiA==",
+      "optional": true,
+      "os": [
+        "freebsd"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-4UYtjV0FBOToshUTYvwoTbfvig9Ec94EcE56WehhqaFZK43rK9sLNYO+vRMnJ9GTOxanFkKB/IvBKt96VmCYiA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-arm-gnueabihf",
+      "name": "@rollup/rollup-linux-arm-gnueabihf",
+      "version": "4.64.4",
+      "integrity": "sha512-Md2BnPCGXVtoyaqPCxxahW4f8r5h8e1Iago6LFQRf+b9m8YOnkfW2L9l1KK9UsQa2gXYoVAVTi6mQgkVNSrOuQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "arm"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-Md2BnPCGXVtoyaqPCxxahW4f8r5h8e1Iago6LFQRf+b9m8YOnkfW2L9l1KK9UsQa2gXYoVAVTi6mQgkVNSrOuQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-arm-musleabihf",
+      "name": "@rollup/rollup-linux-arm-musleabihf",
+      "version": "4.64.4",
+      "integrity": "sha512-oBAOMLpMKggD7Z9oTZCVUp4dDMa84Br/PV5mm6IL1kykBgk5Kp3gyu2buW8KFzvkktyFj+NdZdZCxpRqNgO71A==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "arm"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-oBAOMLpMKggD7Z9oTZCVUp4dDMa84Br/PV5mm6IL1kykBgk5Kp3gyu2buW8KFzvkktyFj+NdZdZCxpRqNgO71A==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-arm64-gnu",
+      "name": "@rollup/rollup-linux-arm64-gnu",
+      "version": "4.64.4",
+      "integrity": "sha512-KYgCzHJjmFhXb7kPv6ih9c6HdY/4JXr6MmLtWFRmK0hAgXxLBx2tI24J1OYJyFl7DfxnzREWSLDj3FxKHfPHjQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-KYgCzHJjmFhXb7kPv6ih9c6HdY/4JXr6MmLtWFRmK0hAgXxLBx2tI24J1OYJyFl7DfxnzREWSLDj3FxKHfPHjQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-arm64-musl",
+      "name": "@rollup/rollup-linux-arm64-musl",
+      "version": "4.64.4",
+      "integrity": "sha512-xpeOpK+6OQfqZL3HQ1leCKM/JFZz0BmpVGkeydWRBdjYYgDlry7a2RWZ0rxnoJ29wMUK/xa/e1CSnnjV7UnxBw==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-xpeOpK+6OQfqZL3HQ1leCKM/JFZz0BmpVGkeydWRBdjYYgDlry7a2RWZ0rxnoJ29wMUK/xa/e1CSnnjV7UnxBw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-loong64-gnu",
+      "name": "@rollup/rollup-linux-loong64-gnu",
+      "version": "4.64.4",
+      "integrity": "sha512-Iju/GGedDha6/e8lseZIxO2i3xPg+aJFw+l07QijRsEkGiUzQbsdNGaouTZwa6N1nu4q9WVJUbc/ejwPN24i+Q==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "loong64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-Iju/GGedDha6/e8lseZIxO2i3xPg+aJFw+l07QijRsEkGiUzQbsdNGaouTZwa6N1nu4q9WVJUbc/ejwPN24i+Q==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-loong64-musl",
+      "name": "@rollup/rollup-linux-loong64-musl",
+      "version": "4.64.4",
+      "integrity": "sha512-v3fNKbpq8uHqlMayTSaRCX9GVa/OECoY5beetD1qa5MKeRmrlgWve98UpcxgQAqGKQpqhcflDAe1AvjIUMenWQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "loong64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-v3fNKbpq8uHqlMayTSaRCX9GVa/OECoY5beetD1qa5MKeRmrlgWve98UpcxgQAqGKQpqhcflDAe1AvjIUMenWQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-ppc64-gnu",
+      "name": "@rollup/rollup-linux-ppc64-gnu",
+      "version": "4.64.4",
+      "integrity": "sha512-ngxCMEz/wPVGkB/Fx7yGW8LkkL1mtg/V/KOYZQytTUe/MCh/w3nsvS0CnjhdS6YEJb98StA2aUnPaQZte0uCZg==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "ppc64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-ngxCMEz/wPVGkB/Fx7yGW8LkkL1mtg/V/KOYZQytTUe/MCh/w3nsvS0CnjhdS6YEJb98StA2aUnPaQZte0uCZg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-ppc64-musl",
+      "name": "@rollup/rollup-linux-ppc64-musl",
+      "version": "4.64.4",
+      "integrity": "sha512-ob/5q9wu+GPAIJvqOzcr0tUo7vIuczYoVmxgfCjbSCE2zwbi/rxkR35b/fnQKGrI5fCua7ULhnB7w7wHseLlNQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "ppc64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-ob/5q9wu+GPAIJvqOzcr0tUo7vIuczYoVmxgfCjbSCE2zwbi/rxkR35b/fnQKGrI5fCua7ULhnB7w7wHseLlNQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-riscv64-gnu",
+      "name": "@rollup/rollup-linux-riscv64-gnu",
+      "version": "4.64.4",
+      "integrity": "sha512-FsFK/3sO22/ogdbJ1TtWFyZAfru07l+4ya1OHn0L7renzB7qoQp0gaaTya7zKezubV5OoG9mSek1Z4qcT5rdew==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "riscv64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-FsFK/3sO22/ogdbJ1TtWFyZAfru07l+4ya1OHn0L7renzB7qoQp0gaaTya7zKezubV5OoG9mSek1Z4qcT5rdew==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-riscv64-musl",
+      "name": "@rollup/rollup-linux-riscv64-musl",
+      "version": "4.64.4",
+      "integrity": "sha512-id50wkt+Jt20/66TkMr04OXdUB64Sj4W3WVhMVf/KuTiy5NFQLGgmCwE0RBobDPr22zyKxEE1U6zMAeBTgnZaQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "riscv64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-id50wkt+Jt20/66TkMr04OXdUB64Sj4W3WVhMVf/KuTiy5NFQLGgmCwE0RBobDPr22zyKxEE1U6zMAeBTgnZaQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-s390x-gnu",
+      "name": "@rollup/rollup-linux-s390x-gnu",
+      "version": "4.64.4",
+      "integrity": "sha512-WinoPEOOZz+rKnluSytyemucpXtygq1LJaU+HBxclUXPz7IVBJIjcdDH9V4nN/yvYjyiVeb/fH32HSX2acLmrw==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "s390x"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-WinoPEOOZz+rKnluSytyemucpXtygq1LJaU+HBxclUXPz7IVBJIjcdDH9V4nN/yvYjyiVeb/fH32HSX2acLmrw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-x64-gnu",
+      "name": "@rollup/rollup-linux-x64-gnu",
+      "version": "4.64.4",
+      "integrity": "sha512-Fs5AqGrSuvXIPSGpZQAUHyM+7eRpKkWvIxN8eTf/8hoTCiKybb2FeqBnB5R9OyVOYI3/vP+VgSBOHT1zkYkKSA==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-Fs5AqGrSuvXIPSGpZQAUHyM+7eRpKkWvIxN8eTf/8hoTCiKybb2FeqBnB5R9OyVOYI3/vP+VgSBOHT1zkYkKSA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-linux-x64-musl",
+      "name": "@rollup/rollup-linux-x64-musl",
+      "version": "4.64.4",
+      "integrity": "sha512-EdzYVEpaQG2YSRW/qi/uHcersoPi119NmUK/hgBQJdAZvk7HjlSKHsBWQvofZ8ZoL98R9SUNJUAtBwRlAsZ7WA==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-EdzYVEpaQG2YSRW/qi/uHcersoPi119NmUK/hgBQJdAZvk7HjlSKHsBWQvofZ8ZoL98R9SUNJUAtBwRlAsZ7WA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-openbsd-x64",
+      "name": "@rollup/rollup-openbsd-x64",
+      "version": "4.64.4",
+      "integrity": "sha512-FZarHZsoTVzvMfCS0hDWcybs+VvkC5TPEYREZhuyD93GGMBBYKa413z2zUsXJEGU7hHJ7EEr4mUUMV1WfHIVmA==",
+      "optional": true,
+      "os": [
+        "openbsd"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-FZarHZsoTVzvMfCS0hDWcybs+VvkC5TPEYREZhuyD93GGMBBYKa413z2zUsXJEGU7hHJ7EEr4mUUMV1WfHIVmA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-openharmony-arm64",
+      "name": "@rollup/rollup-openharmony-arm64",
+      "version": "4.64.4",
+      "integrity": "sha512-A+nCwcEGR1r2MET1kikO4O9nkq6bjpA4gGwZiyZ8CsL3FMqPvh4OREYyZHv/WJjl8eCgfUqh9dFUc01qBOUOgQ==",
+      "optional": true,
+      "os": [
+        "openharmony"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-A+nCwcEGR1r2MET1kikO4O9nkq6bjpA4gGwZiyZ8CsL3FMqPvh4OREYyZHv/WJjl8eCgfUqh9dFUc01qBOUOgQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-win32-arm64-msvc",
+      "name": "@rollup/rollup-win32-arm64-msvc",
+      "version": "4.64.4",
+      "integrity": "sha512-9dS3eF2HL38ItWUF6wbStGGoLALgh3e+BbBfq5VEAm/NKhnEibz/B+D719uTET83+E1lZL2TKlv6idlzOorrgA==",
+      "optional": true,
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-9dS3eF2HL38ItWUF6wbStGGoLALgh3e+BbBfq5VEAm/NKhnEibz/B+D719uTET83+E1lZL2TKlv6idlzOorrgA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/@rollup/rollup-win32-ia32-msvc",
+      "name": "@rollup/rollup-win32-ia32-msvc",
+      "version": "4.64.4",
+      "integrity": "sha512-n2waAp+bsaATQlfM0dSsFWG+Juj3GBGYI5MS4prChfjn3z+PvijnWZT9FmRtcK6Db0F4rfGzMJUP5VENvb7wig==",
+      "optional": true,
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "ia32"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/rollup/rollup.git",
+      "gitHead": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+      "registryIntegrity": "sha512-n2waAp+bsaATQlfM0dSsFWG+Juj3GBGYI5MS4prChfjn3z+PvijnWZT9FmRtcK6Db0F4rfGzMJUP5VENvb7wig==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "4.64.4"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/fsevents",
+      "name": "fsevents",
+      "version": "2.3.3",
+      "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
+      "optional": true,
+      "os": [
+        "darwin"
+      ],
+      "cpu": [],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/fsevents/fsevents.git",
+      "gitHead": "2db891e51aa0f2975c5eaaf6aa30f13d720a830a",
+      "registryIntegrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "chokidar@3.6.0",
+          "byLockfileKey": "node_modules/chokidar",
+          "kind": "optionalDependencies",
+          "range": "~2.3.2"
+        },
+        {
+          "by": "rollup@4.64.4",
+          "byLockfileKey": "node_modules/rollup",
+          "kind": "optionalDependencies",
+          "range": "~2.3.2"
+        },
+        {
+          "by": "tsx@4.23.15",
+          "byLockfileKey": "node_modules/tsx",
+          "kind": "optionalDependencies",
+          "range": "~2.3.3"
+        },
+        {
+          "by": "vite@6.4.4",
+          "byLockfileKey": "node_modules/vite",
+          "kind": "optionalDependencies",
+          "range": "~2.3.3"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/aix-ppc64",
+      "name": "@esbuild/aix-ppc64",
+      "version": "0.28.2",
+      "integrity": "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==",
+      "optional": true,
+      "os": [
+        "aix"
+      ],
+      "cpu": [
+        "ppc64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/android-arm",
+      "name": "@esbuild/android-arm",
+      "version": "0.28.2",
+      "integrity": "sha512-kXXoiPVVGQcnIYGOeaovwOURpniDBpSq4A03qkQ+BMQqtGG6HYap3xne9C1O1yo4TR3qxlCX5IqqmX6fFo2Lqg==",
+      "optional": true,
+      "os": [
+        "android"
+      ],
+      "cpu": [
+        "arm"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-kXXoiPVVGQcnIYGOeaovwOURpniDBpSq4A03qkQ+BMQqtGG6HYap3xne9C1O1yo4TR3qxlCX5IqqmX6fFo2Lqg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/android-arm64",
+      "name": "@esbuild/android-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-5YfKeeI8qWfBZIX+u2xZC3Zlb3Os/gLS2sbEKM+I4ZOcsWmHS2WLysCcQZDAFRslDUU5Oiq44gf6PYN1vGwG5A==",
+      "optional": true,
+      "os": [
+        "android"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-5YfKeeI8qWfBZIX+u2xZC3Zlb3Os/gLS2sbEKM+I4ZOcsWmHS2WLysCcQZDAFRslDUU5Oiq44gf6PYN1vGwG5A==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/android-x64",
+      "name": "@esbuild/android-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-O387ite7SzUyCcy3JQX4P4bLtEA7bLLkx+esve5JHnyYfNTxcVpXZo9jhdB0lTKN44gztELTdU7nS8Nr16Fs1Q==",
+      "optional": true,
+      "os": [
+        "android"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-O387ite7SzUyCcy3JQX4P4bLtEA7bLLkx+esve5JHnyYfNTxcVpXZo9jhdB0lTKN44gztELTdU7nS8Nr16Fs1Q==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/darwin-arm64",
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-n4KqkOQrraxHJcgjM1RvwbigfQKIKJVpM7xp+KsxiyUSrRdIXnt73VhrPAx0fV44hgfmIVKjxMN9J1t5jySVkw==",
+      "optional": true,
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-n4KqkOQrraxHJcgjM1RvwbigfQKIKJVpM7xp+KsxiyUSrRdIXnt73VhrPAx0fV44hgfmIVKjxMN9J1t5jySVkw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/darwin-x64",
+      "name": "@esbuild/darwin-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-uq6suIWYP37qzGddBKPw5QEQPi6HiLGsO7UmkpfyaYNQ3D+rN6w6WfwH+nuqcGXWvawGwxOEroO4YGnFh95azw==",
+      "optional": true,
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-uq6suIWYP37qzGddBKPw5QEQPi6HiLGsO7UmkpfyaYNQ3D+rN6w6WfwH+nuqcGXWvawGwxOEroO4YGnFh95azw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/freebsd-arm64",
+      "name": "@esbuild/freebsd-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-n+I0BTSRIoy+d6RPKnEVwql5UwBJolytvY4mAOIEJorKlqgPII8ix6slVVrfZ5Tnj7glIZvloylbB/EJPMWEXw==",
+      "optional": true,
+      "os": [
+        "freebsd"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-n+I0BTSRIoy+d6RPKnEVwql5UwBJolytvY4mAOIEJorKlqgPII8ix6slVVrfZ5Tnj7glIZvloylbB/EJPMWEXw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/freebsd-x64",
+      "name": "@esbuild/freebsd-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-78XJTJkvPs0kz2w61301PJjXl4g7q3JqiYMZ/M/yVI73EHBrCRTgkhu9oqG7vPqq+a/yadEW8aD+agKlk5xrmg==",
+      "optional": true,
+      "os": [
+        "freebsd"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-78XJTJkvPs0kz2w61301PJjXl4g7q3JqiYMZ/M/yVI73EHBrCRTgkhu9oqG7vPqq+a/yadEW8aD+agKlk5xrmg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-arm",
+      "name": "@esbuild/linux-arm",
+      "version": "0.28.2",
+      "integrity": "sha512-XlDnu2q5yoqems+xay6wSAcg9DDD7K9RLKZEBOMZm3ckNpJBvOX20tSfby8KfrrhINDyv9V2YVZKY/SpoGJI8w==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "arm"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-XlDnu2q5yoqems+xay6wSAcg9DDD7K9RLKZEBOMZm3ckNpJBvOX20tSfby8KfrrhINDyv9V2YVZKY/SpoGJI8w==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-arm64",
+      "name": "@esbuild/linux-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-pW4AC0P3it8c7do9MVM4p51FzHzdM/TZrerurgRcHJ2WTa1VQ1CIq18xncfpBJw4ojkiZZrKW2yIBWBP92j6Ug==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-pW4AC0P3it8c7do9MVM4p51FzHzdM/TZrerurgRcHJ2WTa1VQ1CIq18xncfpBJw4ojkiZZrKW2yIBWBP92j6Ug==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-ia32",
+      "name": "@esbuild/linux-ia32",
+      "version": "0.28.2",
+      "integrity": "sha512-CYbnj78HsIeA+DhgUKgFCfvNsTHFhMMrinUrMZpDXJXKN8T3XViTZ/+wtHeVxEWY8ewSzTFN+nRmSwO2tZaLUQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "ia32"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-CYbnj78HsIeA+DhgUKgFCfvNsTHFhMMrinUrMZpDXJXKN8T3XViTZ/+wtHeVxEWY8ewSzTFN+nRmSwO2tZaLUQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-loong64",
+      "name": "@esbuild/linux-loong64",
+      "version": "0.28.2",
+      "integrity": "sha512-buwkd8nsph4R+ajRvw0qM5Hja/TXQow3ptzWO2EbG/cqcIkHloRrdlBtQlshyYGTNFvfkfJ5tpPLVkY4DtsPfQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "loong64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-buwkd8nsph4R+ajRvw0qM5Hja/TXQow3ptzWO2EbG/cqcIkHloRrdlBtQlshyYGTNFvfkfJ5tpPLVkY4DtsPfQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-mips64el",
+      "name": "@esbuild/linux-mips64el",
+      "version": "0.28.2",
+      "integrity": "sha512-ZVykbDyk7519VwiNb9Lcj9m8XM6v5V9uKPvrEMkkEedVewf+0itkhahp4HDpgERXhwLRpWFypsGbG/J8s0QjJA==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "mips64el"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-ZVykbDyk7519VwiNb9Lcj9m8XM6v5V9uKPvrEMkkEedVewf+0itkhahp4HDpgERXhwLRpWFypsGbG/J8s0QjJA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-ppc64",
+      "name": "@esbuild/linux-ppc64",
+      "version": "0.28.2",
+      "integrity": "sha512-CAXl+Dtd9UUuJd8pKKdwh6MLm3MUMiqMPmhZ3tTSXPqfyQ3vDl6R5hZdZ/kYojK4ofXtdfSv1tFq8XzWx3heNQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "ppc64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-CAXl+Dtd9UUuJd8pKKdwh6MLm3MUMiqMPmhZ3tTSXPqfyQ3vDl6R5hZdZ/kYojK4ofXtdfSv1tFq8XzWx3heNQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-riscv64",
+      "name": "@esbuild/linux-riscv64",
+      "version": "0.28.2",
+      "integrity": "sha512-GeXCej4IQtU1B+QlDV8W/RRvbzI3O/Stss+/bCXv4lZls5WGRtu2a+3JkA3i4qIUlMXpcHebWpF8AkJhATowuA==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "riscv64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-GeXCej4IQtU1B+QlDV8W/RRvbzI3O/Stss+/bCXv4lZls5WGRtu2a+3JkA3i4qIUlMXpcHebWpF8AkJhATowuA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-s390x",
+      "name": "@esbuild/linux-s390x",
+      "version": "0.28.2",
+      "integrity": "sha512-3H1weTYZPxt/WOhByszQZybS9w5lKzUn1FDMsgEChbHWQwHYQQRfBxgCcZvPhjHfKyJjIievvMmEUawJrdY9Dg==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "s390x"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-3H1weTYZPxt/WOhByszQZybS9w5lKzUn1FDMsgEChbHWQwHYQQRfBxgCcZvPhjHfKyJjIievvMmEUawJrdY9Dg==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/linux-x64",
+      "name": "@esbuild/linux-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-4xTZr1FUmSoQW4XIWmit3tzQrUTZM+N3P0XV8xROKYF50XfI7xeO90+1bZvNwxIufQ9hDQVRJH5YhgPVF8A/HQ==",
+      "optional": true,
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-4xTZr1FUmSoQW4XIWmit3tzQrUTZM+N3P0XV8xROKYF50XfI7xeO90+1bZvNwxIufQ9hDQVRJH5YhgPVF8A/HQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/netbsd-arm64",
+      "name": "@esbuild/netbsd-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-sSATRjPeDBg3pdgHoQfoYBob11Kk1FGa9lui5RIHZCoCkJa9QKlvl3/vKz2usCmYYjs7ymJR/2Nnsqe+Hjt5nw==",
+      "optional": true,
+      "os": [
+        "netbsd"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-sSATRjPeDBg3pdgHoQfoYBob11Kk1FGa9lui5RIHZCoCkJa9QKlvl3/vKz2usCmYYjs7ymJR/2Nnsqe+Hjt5nw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/netbsd-x64",
+      "name": "@esbuild/netbsd-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-lqnzCV+mM0gIADaKihiCg6ifgfU2L3h5E33rNQBN1Y4MaVGnzryzmvvf7UHxprpQdE8hpqLolJ9Rl+SkIRDpyw==",
+      "optional": true,
+      "os": [
+        "netbsd"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-lqnzCV+mM0gIADaKihiCg6ifgfU2L3h5E33rNQBN1Y4MaVGnzryzmvvf7UHxprpQdE8hpqLolJ9Rl+SkIRDpyw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/openbsd-arm64",
+      "name": "@esbuild/openbsd-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-AL2qJILH7lNjrDmCQDvdxMfAUIv8KMNZOvrwAQ8i8//ntL9FflhOyMJ8OZSMBb8/AWXe3/5v5S20y3zCoZWKoQ==",
+      "optional": true,
+      "os": [
+        "openbsd"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-AL2qJILH7lNjrDmCQDvdxMfAUIv8KMNZOvrwAQ8i8//ntL9FflhOyMJ8OZSMBb8/AWXe3/5v5S20y3zCoZWKoQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/openbsd-x64",
+      "name": "@esbuild/openbsd-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-QtiuPytchRyC4rwUKhexJdQKvDuZ6hWloi3igqPQNUJCS1/v9EiO3UTOXR6A3FoMo4fnAKbWJdqaIwhOzh8qEw==",
+      "optional": true,
+      "os": [
+        "openbsd"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-QtiuPytchRyC4rwUKhexJdQKvDuZ6hWloi3igqPQNUJCS1/v9EiO3UTOXR6A3FoMo4fnAKbWJdqaIwhOzh8qEw==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/openharmony-arm64",
+      "name": "@esbuild/openharmony-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-WkhYDmpTjLvGlScA1rwjRUmhl4k8oXR3cIbtqWmELgU/dFeHHlEllxDvdWcNJV9rbzCexB5vz8gtNewWLgCT7Q==",
+      "optional": true,
+      "os": [
+        "openharmony"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-WkhYDmpTjLvGlScA1rwjRUmhl4k8oXR3cIbtqWmELgU/dFeHHlEllxDvdWcNJV9rbzCexB5vz8gtNewWLgCT7Q==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/sunos-x64",
+      "name": "@esbuild/sunos-x64",
+      "version": "0.28.2",
+      "integrity": "sha512-GPMSkTOtMnv2U2F8gxe4Io6qmVs+YKyp832Etqqxr0hFngmXQ3rzwytelm3GIn7T4VviRUlf3sOgBOiTdvaf7g==",
+      "optional": true,
+      "os": [
+        "sunos"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-GPMSkTOtMnv2U2F8gxe4Io6qmVs+YKyp832Etqqxr0hFngmXQ3rzwytelm3GIn7T4VviRUlf3sOgBOiTdvaf7g==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/win32-arm64",
+      "name": "@esbuild/win32-arm64",
+      "version": "0.28.2",
+      "integrity": "sha512-PIhhEkE9uPBleRBrQEJpUn7MBnibZzbGzYWPmY3x+YoVg/95zbjB4CxPPOQ8l5tYYM4mMaCthF8/1DIfBQQyWQ==",
+      "optional": true,
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-PIhhEkE9uPBleRBrQEJpUn7MBnibZzbGzYWPmY3x+YoVg/95zbjB4CxPPOQ8l5tYYM4mMaCthF8/1DIfBQQyWQ==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    },
+    {
+      "lockfileKey": "node_modules/tsx/node_modules/@esbuild/win32-ia32",
+      "name": "@esbuild/win32-ia32",
+      "version": "0.28.2",
+      "integrity": "sha512-YmJbfTlvU7Sdn9BB+4PRES4oB6pxgS37MAONj+hBr/cpXS1aBPKXxNnDbu+QCWPj0o9dgyxeq79g6c5P8KeuYA==",
+      "optional": true,
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "ia32"
+      ],
+      "declaredLicense": "MIT",
+      "repository": "git+https://github.com/evanw/esbuild.git",
+      "gitHead": "609683d892977362a0f99026cb74b96263d728a9",
+      "registryIntegrity": "sha512-YmJbfTlvU7Sdn9BB+4PRES4oB6pxgS37MAONj+hBr/cpXS1aBPKXxNnDbu+QCWPj0o9dgyxeq79g6c5P8KeuYA==",
+      "integrityMatchesLockfile": true,
+      "requiredBy": [
+        {
+          "by": "esbuild@0.28.2",
+          "byLockfileKey": "node_modules/tsx/node_modules/esbuild",
+          "kind": "optionalDependencies",
+          "range": "0.28.2"
+        }
+      ]
+    }
+  ]
+}

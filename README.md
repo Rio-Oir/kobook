@@ -278,9 +278,12 @@ What that means, in outline — the license text governs, not this summary:
 
 The license covers this repository's own source and documentation. It does
 **not** cover the third-party packages this project depends on: those remain
-under their own licenses, listed in `THIRD_PARTY_NOTICES.md` with available
-texts vendored under `licenses/` and missing texts identified. See `NOTICE.md`. Those texts are other people's documents and
-carry no SPDX header from this project.
+under their own licenses. The full inventory is `THIRD_PARTY_NOTICES.md`, the
+verbatim texts are under `licenses/`, and the cases where a package ships no
+text of its own are recorded in `licenses/supplemental/` — including the ones
+where no text was retrieved, which remain **open gaps**. `NOTICE.md` is the
+short version. Those texts are other people's documents and carry no SPDX header
+from this project.
 
 **Where the identifier appears.** First-party `.ts`, `.tsx`, `.mjs`, `.js` and
 `.css` files carry it. It is deliberately absent from `index.html`, Markdown,
@@ -295,11 +298,23 @@ everything under `licenses/`.
 The product name is **kobook**. It appears in the UI header, the page title and
 the package metadata.
 
-The name has **not been trademark-cleared**. No trademark registry, domain
-availability, app-store, business-name or jurisdiction/class search has been
-carried out, and unrelated uses of the name have not been assessed. MPL-2.0
-grants no trademark rights. Anyone intending to distribute under this name
-should treat clearance as outstanding.
+**The name is not cleared, and it is not unique.** A dated search of package
+registries, code hosting, app stores, the domain registries and one trademark
+register on 2026-10-16 found the identical name already in use by unrelated
+parties — including a long-established publisher on `.com` and an active product
+on `.app`. A narrow US wordmark search returned no matching mark, but that query
+was exact-wordmark only and several other registers were not searched at all.
+So:
+
+* nothing here claims the name is available, registrable or unique;
+* MPL-2.0 grants **no** trademark rights (see [License](#license));
+* anyone intending to distribute under this name should treat clearance as
+  outstanding and obtain registry-level clearance in the relevant
+  jurisdictions and classes first.
+
+The queries, the responses and the limits of that search — including the
+registers that were **not** searched — are recorded in
+[`docs/NAME-SEARCH.md`](docs/NAME-SEARCH.md).
 
 ### Why `gloss*` appears in the source
 

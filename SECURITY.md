@@ -2,14 +2,41 @@
 
 ## Reporting a vulnerability
 
-**There is no published private reporting channel yet.** The project is licensed
-(MPL-2.0 — see `LICENSE`) but it has no release, no published home and therefore
-no security contact to put here. Inventing an address would be worse than saying
-so.
+Please report suspected vulnerabilities **privately, by email**, to:
 
-Before this is published, the maintainer needs to add one — a private advisory
-route, a dedicated address, or both. Until then: do not open a public issue
-containing exploit details, and do not assume a report has been received.
+**`a1458367843@gmail.com`** — <mailto:a1458367843@gmail.com>
+
+This mailbox is the reporting channel for this project. Two honest caveats:
+
+* **Delivery has not been tested and no response time is promised.** No
+  acknowledgement schedule, triage window or fix deadline is stated here,
+  because none has been agreed. Treat a report as received only when you get a
+  reply.
+* The address is a contact for security reports about *this project*. Please do
+  not send credentials, personal data or third-party confidential material with
+  a report.
+
+The source is currently in a private GitHub repository, and reporting through
+GitHub is not available yet:
+
+* GitHub's *private vulnerability reporting* is a feature of **public**
+  repositories. For this repository the REST endpoint answers `404 Not Found`:
+  `GET /repos/Rio-Oir/kobook/private-vulnerability-reporting`. The same endpoint
+  returns `{"enabled": false}` for a public repository that has not switched the
+  feature on, and `{"enabled": true}` for one that has — so this is the feature
+  not applying to a private repository, not a permissions or token problem.
+* Issues are enabled on the repository, so an issue *can* be opened — but issues
+  are visible to everyone with access, which is the wrong place for exploit
+  details. Use the mailbox instead.
+
+**Once the repository is public**, turning on private vulnerability reporting
+would add a second, in-GitHub channel alongside the mailbox — Settings → Code
+security, or `PUT /repos/Rio-Oir/kobook/private-vulnerability-reporting` with
+`{"enabled": true}` (repository admin required). GitHub then shows a "Report a
+vulnerability" button under Security → Advisories, and reports through it stay
+private until an advisory is published. That is an option for later, not a
+channel that exists now, and enabling it is a repository-settings change that
+this project has not made.
 
 ## What this application is trusted with
 
@@ -44,11 +71,28 @@ genuinely risky.
   from devtools produces a refusal with an explicit message, not a silent send
   to a new destination.
 * **Never leaves through anything else.** It is not part of the backup format,
-  not in an export, not in a log, and not in any request this application's own
-  code builds. `pickExtractFields` in `src/lib/browser-extract-server.ts`
-  builds the one outbound request body by name and *throws* on an unexpected
-  key, so a settings object spread into it fails loudly rather than leaking a
-  credential once and never being noticed.
+  it is not in an export, and it is not in a log. The one request this
+  application builds that carries the key is the call to the model endpoint the
+  reader confirmed — that call *is* the feature, and its destination is pinned to
+  the confirmed origin.
+
+  The application builds exactly two other kinds of outbound request, and
+  neither involves the key:
+
+  * **The server-extraction request** (`POST /api/anonymous/extract`, used by
+    the fallback channel only) is built by `pickExtractFields` in
+    `src/lib/browser-extract-server.ts`, which names the fields it forwards —
+    `kind`, `content`, `title` — and *throws* on any other own property. A
+    settings object spread into that call fails loudly rather than leaking a
+    credential once and never being noticed.
+  * **The reader-service request** (browser → `r.jina.ai`, used first for most
+    hosts) is built in `src/lib/browser-extract-jina.ts`, which is a separate
+    module and does **not** go through `pickExtractFields`: it builds its URL
+    from the module's own constant plus the target, and sends fixed headers
+    (a content type and a return-format hint) with `credentials: "omit"`. No
+    settings value, and no credential, reaches it — the whitelist above guards
+    the server route, not this one, and the two are described separately here
+    for that reason.
 * **Redacted from errors.** `redactSecrets` in `src/lib/ai.ts` strips
   `Bearer …` and `sk-…` shapes from any provider error before it is shown or
   kept, and the retained `Error` carries no `cause`, headers or request body.
@@ -67,14 +111,24 @@ the wire.
 
 Requests happen only when the reader asks for them:
 
-* **Paste a URL** → the browser asks `r.jina.ai` **directly**, before anything
-  else. The target URL and the reader's IP address are visible to that third
-  party. The request carries no cookies (`credentials: "omit"`) and cannot be
-  redirected to a different reader service, because the address is a module
-  constant rather than a parameter. **A page cannot choose its own proxy.**
-* **The fallback fires** → only after the direct channel fails, and never after
-  a cancellation, the browser calls `POST /api/anonymous/extract` on the origin
-  serving the app. The body is the target URL and nothing else.
+* **Paste an ordinary URL** → the browser asks `r.jina.ai` — a third-party
+  reader service — **directly, before this project's server is involved**. The
+  target URL and the reader's IP address are visible to that third party. The
+  request carries no cookies (`credentials: "omit"`) and cannot be aimed at a
+  different reader service, because the address is a module constant rather than
+  a parameter: **a page cannot choose its own proxy.**
+* **Paste an `x.com` or `twitter.com` URL** → the browser does **not** contact
+  the third-party service. Those hosts answer a plain fetch with a JavaScript
+  shell or a login wall, so the attempt would burn a round trip to learn
+  nothing; the request goes straight to `POST /api/anonymous/extract` instead.
+  The match is on the parsed hostname — those two hosts and their DNS
+  subdomains only, so `evilx.com` and `x.com.evil.test` are not caught. This is
+  a best-effort path, not an access grant: a post that needs JavaScript or a
+  session still fails, and the reader is asked to paste the text.
+* **The server fallback** → for any other host, only after the direct channel
+  fails, and never after a cancellation. The body is the target URL and, when
+  supplied, a title — built field by field from a fixed whitelist, so nothing
+  else can ride along.
 * **Ask or explain** → the browser calls the reader's own configured model
   endpoint, with the reader's own key. Never through this project's server.
 
@@ -149,6 +203,34 @@ assert that an account, admin or cloud route answers 404.
 * **Backups exclude credentials.** The backup schema names its fields
   explicitly; provider, model, endpoint and key are not among them, and a
   restore validates strictly and refuses any collision instead of overwriting.
+
+## Known dependency advisories
+
+As of 2026-10-16, `npm audit --omit=dev` reports **0** known vulnerabilities in the production dependency set. The findings below are in the development build toolchain; a zero audit count is not a proof of absence of vulnerabilities.
+
+`npm audit` over the full tree reports **7**. Those are **two advisories** —
+npm counts one entry for each package it flags, and five of the seven are
+propagation entries for packages that merely depend on an affected one. They are
+real, so they are recorded here rather than left for a reader to discover. All
+of them are in the **development build toolchain**, reached through
+`tailwindcss@3.4.19`, and none can be fixed without a breaking change:
+
+| Advisory | Severity | Affects | Patched release |
+| --- | --- | --- | --- |
+| [`GHSA-vfj7-8cjw-p6xm`](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) — `braces`, stack-exhaustion denial of service on deeply nested patterns | high | `braces@3.0.3` directly, and then `micromatch`, `chokidar`, `fast-glob` and `tailwindcss` as propagation entries | **None exists.** The advisory records no patched version, and `3.0.3` is the newest published release of `braces`: every published version is inside the vulnerable range. Upgrading within 3.x does not fix it, because there is nothing newer to upgrade to. |
+| [`GHSA-rj75-hqrm-r3gf`](https://github.com/advisories/GHSA-rj75-hqrm-r3gf) — `postcss-selector-parser`, quadratic-complexity CPU exhaustion | moderate | `postcss-selector-parser@6.1.4` directly, and then `postcss-nested` and `tailwindcss` (the Tailwind propagation entry is shared with the other chain) | `7.1.6`. `tailwindcss@3` and `postcss-nested@6` both require `^6.1.x`, so reaching it means a major bump of those first. |
+
+`npm audit fix` without `--force` proposes no change — there is no
+non-breaking upgrade that resolves any of them. `--force` offers
+`tailwindcss@4.3.3`, a major upgrade of the whole CSS toolchain; that is a
+migration decision with its own regression surface, not a security patch, and it
+has deliberately not been applied here. It is the remediation to evaluate.
+
+Both advisories are denial-of-service issues triggered by hostile *input* to a
+parser. Both parsers here are fed this project's own CSS and JavaScript during a
+local build — not attacker-controlled selectors on a request path — which lowers
+the practical exposure without removing it. Anyone running `npm ci` and a build
+in a context where those inputs are untrusted should treat these as live.
 
 ## Known limitations
 

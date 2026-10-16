@@ -1,0 +1,515 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-16",
+  "purpose": "Coverage for every lockfile package whose own npm tarball ships no license text. Read by scripts/third-party-notices.mjs, which re-verifies every SHA-256 below on each run and fails if one changes.",
+  "howToUpdate": "Add or edit an entry here and re-run `npm run notices`. Do not edit the texts in this directory unless upstream changed them; the generator validates the recorded hash.",
+  "entries": [
+    {
+      "disposition": "project-text-covers-package",
+      "packages": [
+        {
+          "name": "@esbuild/aix-ppc64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/android-arm",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/android-arm64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/android-x64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/darwin-arm64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/darwin-x64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/freebsd-arm64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/freebsd-x64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-arm",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-arm64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-ia32",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-loong64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-mips64el",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-ppc64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-riscv64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-s390x",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/linux-x64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/netbsd-arm64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/netbsd-x64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/openbsd-arm64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/openbsd-x64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/openharmony-arm64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/sunos-x64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/win32-arm64",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/win32-ia32",
+          "version": "0.25.12"
+        },
+        {
+          "name": "@esbuild/win32-x64",
+          "version": "0.25.12"
+        }
+      ],
+      "declaredLicense": "MIT",
+      "coveredByText": "licenses/esbuild-0.25.12-LICENSE.md",
+      "coveredByPackage": "esbuild@0.25.12",
+      "upstream": {
+        "kind": "github-contents-api",
+        "repository": "https://github.com/evanw/esbuild",
+        "revision": "208f539945b145e7c9d6d844290f81c3fe5af320",
+        "path": "LICENSE.md",
+        "apiUrl": "https://api.github.com/repos/evanw/esbuild/contents/LICENSE.md?ref=208f539945b145e7c9d6d844290f81c3fe5af320",
+        "retrievedAt": "2026-10-16",
+        "sha256": "b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681",
+        "bytes": 1069
+      },
+      "evidence": [
+        "The registry reports gitHead 208f539945b145e7c9d6d844290f81c3fe5af320 for both esbuild@0.25.12 and every @esbuild/* platform package at 0.25.12: they are built from one revision of one project.",
+        "The LICENSE.md fetched from that revision through the GitHub contents API is byte-identical (SHA-256 b40ec5ba…) to esbuild-0.25.12-LICENSE.md, which is copied from the installed esbuild@0.25.12 tarball — a package whose integrity is pinned in package-lock.json.",
+        "The platform packages' own tarballs contain only package.json, README.md and the binary; that is why no text is available from them directly.",
+        "corePackageIntegrity: sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg=="
+      ]
+    },
+    {
+      "disposition": "project-text-covers-package",
+      "packages": [
+        {
+          "name": "@esbuild/aix-ppc64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/android-arm",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/android-arm64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/android-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/darwin-arm64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/darwin-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/freebsd-arm64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/freebsd-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-arm",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-arm64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-ia32",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-loong64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-mips64el",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-ppc64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-riscv64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-s390x",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/linux-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/netbsd-arm64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/netbsd-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/openbsd-arm64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/openbsd-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/openharmony-arm64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/sunos-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/win32-arm64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/win32-ia32",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/win32-x64",
+          "version": "0.28.2"
+        }
+      ],
+      "declaredLicense": "MIT",
+      "coveredByText": "licenses/esbuild-0.28.2-LICENSE.md",
+      "coveredByPackage": "esbuild@0.28.2",
+      "upstream": {
+        "kind": "github-contents-api",
+        "repository": "https://github.com/evanw/esbuild",
+        "revision": "609683d892977362a0f99026cb74b96263d728a9",
+        "path": "LICENSE.md",
+        "apiUrl": "https://api.github.com/repos/evanw/esbuild/contents/LICENSE.md?ref=609683d892977362a0f99026cb74b96263d728a9",
+        "retrievedAt": "2026-10-16",
+        "sha256": "b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681",
+        "bytes": 1069
+      },
+      "evidence": [
+        "The registry reports gitHead 609683d892977362a0f99026cb74b96263d728a9 for both esbuild@0.28.2 and every @esbuild/* platform package at 0.28.2: they are built from one revision of one project.",
+        "The LICENSE.md fetched from that revision through the GitHub contents API is byte-identical (SHA-256 b40ec5ba…) to esbuild-0.28.2-LICENSE.md, which is copied from the installed esbuild@0.28.2 tarball — a package whose integrity is pinned in package-lock.json.",
+        "The platform packages' own tarballs contain only package.json, README.md and the binary; that is why no text is available from them directly.",
+        "corePackageIntegrity: sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA=="
+      ]
+    },
+    {
+      "disposition": "project-text-covers-package",
+      "packages": [
+        {
+          "name": "@rollup/rollup-android-arm-eabi",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-android-arm64",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-darwin-arm64",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-darwin-x64",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-freebsd-arm64",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-freebsd-x64",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-arm-gnueabihf",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-arm-musleabihf",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-arm64-gnu",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-arm64-musl",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-loong64-gnu",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-loong64-musl",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-ppc64-gnu",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-ppc64-musl",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-riscv64-gnu",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-riscv64-musl",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-s390x-gnu",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-x64-gnu",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-linux-x64-musl",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-openbsd-x64",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-openharmony-arm64",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-win32-arm64-msvc",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-win32-ia32-msvc",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-win32-x64-gnu",
+          "version": "4.64.4"
+        },
+        {
+          "name": "@rollup/rollup-win32-x64-msvc",
+          "version": "4.64.4"
+        }
+      ],
+      "declaredLicense": "MIT",
+      "coveredByText": "licenses/rollup-4.64.4-LICENSE.md",
+      "coveredByPackage": "rollup@4.64.4",
+      "upstream": {
+        "kind": "github-contents-api",
+        "repository": "https://github.com/rollup/rollup",
+        "revision": "9568144c546fd1def46183b75ca711b6e3bbafa9",
+        "path": "LICENSE.md",
+        "apiUrl": "https://api.github.com/repos/rollup/rollup/contents/LICENSE.md?ref=9568144c546fd1def46183b75ca711b6e3bbafa9",
+        "retrievedAt": "2026-10-16",
+        "sha256": "fa1bd040c5bdeefe65b3821cebf474f2733ce65df13089bd151dda1778e62fe8",
+        "bytes": 35231
+      },
+      "evidence": [
+        "The registry reports gitHead 9568144c546fd1def46183b75ca711b6e3bbafa9 for rollup@4.64.4 and for every @rollup/rollup-* platform package at that version.",
+        "That revision's LICENSE.md was fetched through the GitHub contents API and is byte-identical (SHA-256 fa1bd040…) to rollup-4.64.4-LICENSE.md, copied from the installed rollup@4.64.4 tarball. It contains Rollup's own MIT text and the notices for code bundled into Rollup.",
+        "corePackageIntegrity: sha512-1DTowQbct6FOZTjZoYrZ8BwsjIwsB89HxwOn2pWPEyEKWWvKI8OrpTgmicB3fUbQzhlooCQRIn6JLUPhE0CZUA=="
+      ]
+    },
+    {
+      "disposition": "upstream-text",
+      "packages": [
+        {
+          "name": "saxes",
+          "version": "6.0.0"
+        }
+      ],
+      "declaredLicense": "ISC",
+      "textFile": "saxes-6.0.0-LICENSE.txt",
+      "sha256": "0fac2374380621b22e6b50451057721a9c52935b02d16d106a9f04897f061d0e",
+      "bytes": 3011,
+      "upstream": {
+        "kind": "github-contents-api",
+        "repository": "https://github.com/lddubeau/saxes",
+        "revision": "211fa0ebec9b628affc09219199639887174bfc3",
+        "path": "LICENSE",
+        "apiUrl": "https://api.github.com/repos/lddubeau/saxes/contents/LICENSE?ref=211fa0ebec9b628affc09219199639887174bfc3",
+        "retrievedAt": "2026-10-16",
+        "treeBlobSha": "187f3ba399862022f4e670b2a3a1dbc6d7e6a800"
+      },
+      "evidence": [
+        "The registry reports gitHead 211fa0ebec9b628affc09219199639887174bfc3 for saxes@6.0.0, matching the repository field and the audit's earlier independent fetch of the same URL.",
+        "The package tarball, integrity-verified against package-lock.json, contains five entries and no license file.",
+        "The fetched text carried no copyright line of its own beyond \"Contributors\", which is what the upstream file says; nothing was added here."
+      ]
+    },
+    {
+      "disposition": "upstream-text",
+      "packages": [
+        {
+          "name": "fsevents",
+          "version": "2.3.3"
+        }
+      ],
+      "declaredLicense": "MIT",
+      "textFile": "fsevents-2.3.3-LICENSE",
+      "sha256": "2a8a5d6197bb97a018b8a190dd3ed853d750ca87c8e80c17aad41d6c6ff448e1",
+      "bytes": 1133,
+      "upstream": {
+        "kind": "github-contents-api",
+        "repository": "https://github.com/fsevents/fsevents",
+        "revision": "2db891e51aa0f2975c5eaaf6aa30f13d720a830a",
+        "path": "LICENSE",
+        "apiUrl": "https://api.github.com/repos/fsevents/fsevents/contents/LICENSE?ref=2db891e51aa0f2975c5eaaf6aa30f13d720a830a",
+        "retrievedAt": "2026-10-16",
+        "treeBlobSha": "LICENSE"
+      },
+      "evidence": [
+        "The registry reports gitHead 2db891e51aa0f2975c5eaaf6aa30f13d720a830a for fsevents@2.3.3.",
+        "fsevents is an optional dependency for macOS only (required by chokidar, rollup, tsx and vite), so it is in the lockfile but is not installed on this Windows machine.",
+        "The upstream repository at that revision contains a 1133-byte LICENSE with the project's own MIT text and copyright line, reproduced here unmodified."
+      ]
+    },
+    {
+      "disposition": "upstream-text",
+      "packages": [
+        {
+          "name": "abstract-logging",
+          "version": "2.0.1"
+        }
+      ],
+      "declaredLicense": "MIT",
+      "evidence": [
+        "The package declares \"license\": \"MIT\" in its package.json, and the registry reports the same for this version (gitHead 80dfaef91ee87008f4ed2b6e78921d383bccd406).",
+        "The tarball, integrity-verified against package-lock.json, contains only index.js, test.js, package.json and Readme.md — no license file. Neither does the repository at that revision, nor its default branch.",
+        "Its README at that revision links http://jsumners.mit-license.org/, which serves the MIT text at /license.txt. That URL returned HTTP 200 text/plain, and the 1112 bytes it returned are reproduced here verbatim, with SHA-256 af15a41ce02371f77476b7a201e036c0ae6c5d6d2a233b4e5f0fd5fca123457e.",
+        "The notice's year is generated by that endpoint when it is requested, so the year in this copy is a retrieval snapshot (2026-10-16) and is not a publication date of the package. The endpoint renders from a pinned per-author config in remy/mit-license — commit 21ac30f351903ff23b399289cb4fdda05fb45f15, blob ecd7b38c6127119bcf98e6429660d02edf9d5c57 — which names the copyright holder (James Sumners). No wording and no name was added or altered here.",
+        "This is the license text the publisher's own package documentation points at, for this exact version. It is vendored as the upstream-linked text; a distributor relying on it should read the recorded URL and hashes rather than this summary."
+      ],
+      "textFile": "abstract-logging-2.0.1-LICENSE.txt",
+      "sha256": "af15a41ce02371f77476b7a201e036c0ae6c5d6d2a233b4e5f0fd5fca123457e",
+      "bytes": 1112,
+      "upstream": {
+        "kind": "linked-license-endpoint",
+        "url": "https://jsumners.mit-license.org/license.txt",
+        "httpStatus": 200,
+        "contentType": "text/plain",
+        "retrievedAt": "2026-10-16",
+        "linkedFrom": {
+          "file": "Readme.md",
+          "repository": "https://github.com/jsumners/abstract-logging",
+          "revision": "80dfaef91ee87008f4ed2b6e78921d383bccd406",
+          "note": "the revision the registry reports for abstract-logging@2.0.1, and the file whose License section links the endpoint"
+        },
+        "serviceConfig": {
+          "kind": "pinned",
+          "repository": "https://github.com/remy/mit-license",
+          "revision": "21ac30f351903ff23b399289cb4fdda05fb45f15",
+          "path": "users/jsumners.json",
+          "blobSha": "ecd7b38c6127119bcf98e6429660d02edf9d5c57",
+          "contents": "{ copyright: \"James Sumners\", url, email, gravatar, theme } — no year, no license text",
+          "note": "the endpoint renders its notice from this config; the config names the copyright holder and the endpoint supplies the year"
+        }
+      }
+    },
+    {
+      "disposition": "declared-only",
+      "packages": [
+        {
+          "name": "dlv",
+          "version": "1.1.3"
+        }
+      ],
+      "declaredLicense": "MIT",
+      "evidence": [
+        "The package declares \"license\": \"MIT\" in its package.json, and the registry reports the same for this version (gitHead e636db817a96e4ca4710b407163fb992748b3b80).",
+        "No license text was retrievable from any of these, each checked directly: the published tarball (package.json, index.js, README.md and five files under dist/ — integrity verified against package-lock.json); the repository at that revision (.gitignore, .travis.yml, README.md, index.js, package.json, test.js); the repository's default branch; and the link its README gives for licensing.",
+        "That link, oss.ninja/mit/developit, redirects to an unrelated site: the response body is a 141 KB HTML page that is not this package's license text. Fetching it therefore proves nothing either way, and it was not copied — vendoring unrelated third-party page output as a license would misrepresent it.",
+        "So the position is: the declared license is MIT and a retrievable text was not found at any of the four places checked. That is a retrieval result, not a statement that the publisher never issued a license, and the gap stays open until text is found or the dependency is removed."
+      ]
+    },
+    {
+      "disposition": "declared-only",
+      "packages": [
+        {
+          "name": "@napi-rs/lzma-linux-x64-gnu",
+          "version": "1.5.1"
+        }
+      ],
+      "declaredLicense": "MIT",
+      "evidence": [
+        "The package declares \"license\": \"MIT\" in its package.json, and the registry reports the same for this version (gitHead f164df92d83e095f195d628b1a68a141ae2eb638).",
+        "It is an optional dependency for Linux x64 and is not installed on this machine; it is required by rollup@4.64.4.",
+        "The upstream repository at that revision — and on its default branch — contains no license file, so there is no text to reproduce.",
+        "The gap is recorded rather than filled."
+      ]
+    }
+  ]
+}

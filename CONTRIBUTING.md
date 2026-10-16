@@ -107,5 +107,5 @@ rejected regardless of what else it improves.
 
 ## Reporting a security issue
 
-See `SECURITY.md`. There is no private reporting channel yet, and public issues
-with exploit details should not be opened.
+Report it privately to the mailbox in `SECURITY.md` — do not open a public
+issue containing exploit details.
