@@ -10,6 +10,18 @@ sync across devices, and URL extraction can use the bundled service. Model calls
 use *your* key, which the browser sends directly to the endpoint you configure —
 never through this project's server.
 
+## This repository's role
+
+This is the **open-source line**: the reader, the optional service and the
+release build, with nothing about a particular operator — no terms of service,
+no privacy policy, no filing numbers, no domain, no analytics ID. A public
+instance is run by whoever deploys it, and that operator needs its own terms,
+privacy policy and filings.
+
+The tree is exported from the maintainers' private deployment tree with that
+material removed. Changes flow one way: the private tree is canonical, this
+repository receives exported snapshots.
+
 ## What it does
 
 - **Import** — paste a link, text or HTML; local files: PDF, EPUB, DOCX, HTML,
