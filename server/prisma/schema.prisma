@@ -1,0 +1,608 @@
+// Prisma schema — phase 2 (accounts and per-user isolation).
+//
+// Scope note:
+//   * phase 1 proved the four Better Auth tables plus one restart-persistence
+//     probe (`SampleRecord`);
+//   * phase 2 adds account governance: `role`, `banned`, `banReason`,
+//     `banExpires` on `user`, and an append-only `AdminAuditEvent` trail.
+//
+// The four account-governance columns deliberately mirror the field names and
+// types of Better Auth's official admin plugin schema (role / banned /
+// banReason / banExpires, all `input: false`). We declare them through
+// `user.additionalFields` instead of enabling that plugin, because the plugin
+// also mounts impersonation endpoints that cannot be switched off and are not
+// part of the phase-2 scope. Keeping the shapes identical means adopting the
+// plugin later is a no-op schema change.
+//
+// Article / note / generation / quota tables are phase 3-4 work and are
+// deliberately absent.
+//
+// The auth models deliberately mirror Better Auth's documented Prisma shape
+// (lowercase table names via @@map, camelCase columns). The Prisma delegate
+// names derive from the *model* names (User -> prisma.user), which is what
+// Better Auth's prisma adapter resolves to after lowercasing.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  /// E.164 mainland-mobile number for a phone-number account. Null for an
+  /// email account.
+  ///
+  /// `email` stays required and unique because the auth core (and the Prisma
+  /// shape it documents) keys accounts on it. A phone account therefore gets
+  /// a placeholder address in the reserved `@phone.invalid` domain, which
+  /// cannot receive mail and which a sign-up hook refuses to let anyone claim
+  /// through the email form; the number is the identity that matters here.
+  /// `emailVerified` is set when the account is created from a verified
+  /// number — the code proved control of the number, which is the same
+  /// ownership proof the email flow asks for.
+  phoneNumber   String?   @unique
+  /// Set when a verification code confirmed the number. Never accepted from a
+  /// request (`input: false` in `user.additionalFields`); only the phone auth
+  /// endpoints write it.
+  phoneNumberVerified Boolean @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  /// "user" or "admin". Never accepted from a request body: declared as
+  /// `input: false` in `user.additionalFields`, so the auth layer drops any
+  /// client-supplied value. Only the ADMIN_EMAILS bootstrap and the admin CLI
+  /// change it.
+  role          String    @default("user")
+  /// Account disable flag. Checked when a session is created and on every
+  /// protected request, so disabling takes effect without waiting for the
+  /// session to expire.
+  banned        Boolean   @default(false)
+  banReason     String?
+  /// Null means a permanent ban; otherwise the instant the ban stops applying.
+  banExpires    DateTime?
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+/// Phase 1 migration/persistence probe. A row is written by one process and
+/// read back by a *different* process to prove the data is really in
+/// PostgreSQL and not in process memory.
+model SampleRecord {
+  id          String   @id @default(uuid())
+  label       String
+  value       String
+  /// OS process id of the writer, so the reader can prove it is not itself.
+  writerPid   Int
+  /// Identifies the writer run; survives the restart that the sample checks.
+  writerRunId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([label])
+  @@map("sample_record")
+}
+
+/// Append-only record of administrator actions (role grants, revocations,
+/// account disabling). Deliberately has no foreign key to `user`: an audit row
+/// must stay readable after the actor or target account is deleted, and an
+/// audit trail that silently disappears with its subject is not an audit
+/// trail. `actorEmail` is denormalised for the same reason.
+///
+/// Stores identifiers, the action and the outcome only — never article text,
+/// notes or credentials.
+model AdminAuditEvent {
+  id           String   @id @default(uuid())
+  /// Session user id of the administrator who acted. Never taken from a body.
+  /// "system" for the ADMIN_EMAILS bootstrap, "cli" for the admin CLI.
+  actorUserId  String
+  /// Denormalised so the record stays readable if the actor is deleted.
+  actorEmail   String
+  /// Account the action was applied to.
+  targetUserId String
+  /// Machine-readable action: "grant_role" | "revoke_role" | "disable_account"
+  /// | "enable_account".
+  action       String
+  /// Outcome: "applied" | "rejected".
+  result       String
+  /// Optional context, e.g. the role name. Never contains private content.
+  detail       String?
+  /// Fastify request id, so an admin action can be correlated with the logs of
+  /// the request that performed it. Null for bootstrap/CLI actions.
+  requestId    String?
+  createdAt    DateTime @default(now())
+
+  @@index([targetUserId])
+  @@index([actorUserId])
+  @@index([createdAt])
+  @@map("admin_audit_event")
+}
+
+// ── Phase 3 (slice 1): article library ────────────────────────────────────
+//
+// Three tables back the user-owned article library:
+//   * `article`      — owner, source, title, soft-delete marker
+//   * `article_version` — one parse run; refresh in slice 2 will add v2/v3
+//   * `paragraph` — verbatim copy of the ContentBlock array produced by
+//     the parse layer; the version-row is the snapshot boundary
+//
+// The slice deliberately ships only the import-text-and-CRUD path:
+//   * `source = "text" | "url"`, but only "text" is wired in this slice
+//   * "url" returns 400 from the import schema (the URL importer is a
+//     placeholder module; Jina + DNS / redirect SSRF is slice 2 work)
+//   * Notes / messages / generation jobs are slice 2 / 4 work and are not
+//     represented here yet — the type names live in `shared/contracts` so
+//     frontend callers do not break when those tables arrive.
+//
+// Soft delete (`deletedAt`) is the only delete the slice exposes. Account
+// deletion is the only thing that will physically remove these rows
+// (phase 6); a hard delete here would be inconsistent with the
+// "no leaked entry points" gate, because foreign keys (notes, generation
+// jobs) would still reference the row until they too are deleted.
+
+model Article {
+  id          String   @id @default(cuid())
+  /// Session user id; never read from the request body. The library route
+  /// uses this column as a SQL filter on every query, so cross-user reads
+  /// cannot happen even if the route handler forgets to check.
+  ownerUserId String
+  /// "text" — user pasted markdown or HTML. "url" — coming in slice 2.
+  /// The DB does not constrain the value to a closed set; the import route
+  /// is the gate, and the contract types pin the public shape.
+  source      String
+  /// Canonicalised source URL when `source = "url"`. Null for pasted text.
+  sourceUrl   String?
+  /// Document title. The parse layer's first heading wins; the import
+  /// request may override it explicitly.
+  title       String
+  /// Optional byline from the extractor; null when the source had none.
+  author      String?
+  importedAt  DateTime @default(now())
+  /// Soft-delete marker. List / detail / export queries always filter
+  /// `WHERE deletedAt IS NULL`.
+  deletedAt   DateTime?
+  /// Client-supplied idempotency key, unique per owner. A retried import
+  /// that carries the same key returns the article the first attempt
+  /// created instead of a duplicate — which is what makes the anonymous
+  /// migration safe to retry when a response is lost. Null for every
+  /// caller that does not send one.
+  clientKey   String?
+  /// The article's own picture (`og:image` from the fetched page, or the
+  /// first content image). Local-only until this column existed, which is
+  /// why a second device used to fall back to the painted default cover
+  /// even though the first device saw the real one.
+  coverImage   String?
+  /// The page's published date, when the extractor found one (ISO string,
+  /// kept as text for the same reason the client keeps it as text).
+  publishedAt  String?
+  /// AI topic tags (2–4 short Chinese labels). Account data: generated
+  /// once on any device, shown by every device's library filter.
+  tags         String[]  @default([])
+  /// Model id that produced `tags`, for "why did it label it that".
+  tagsModel    String?
+  /// When the tags were last written.
+  tagsAt       DateTime?
+  /// The generated article summary. Json rather than a second table: it is
+  /// one value written whole, never queried by field.
+  brief        Json?
+  /// When the summary was last written.
+  briefAt      DateTime?
+
+  versions ArticleVersion[]
+  highlights Highlight[]
+
+  @@unique([ownerUserId, clientKey])
+  @@index([ownerUserId, id])
+  @@index([ownerUserId, deletedAt, id])
+  @@map("article")
+}
+
+/// One reader-made mark in an article.
+///
+/// Kept beside `Note` rather than folded into it: a highlight exists without
+/// a question (the common case), and a note exists without being a simple
+/// range (multi-paragraph). The two share an article and a version anchor but
+/// nothing else, so one table would make every note's multi-paragraph range
+/// nullable for the sake of the other shape.
+model Highlight {
+  id          String   @id @default(cuid())
+  /// Session user id; every route filters on it, same as `Note`.
+  ownerUserId String
+  articleId   String
+  /// The version the offsets were measured against. A refresh writes a new
+  /// version; highlights on the old one stay readable but are not painted
+  /// over text they were not measured against.
+  versionId   String
+  /// 1-based, matches `Paragraph.blockIndex`.
+  paragraphIndex Int
+  /// Half-open `[startOffset, endOffset)` inside that paragraph's text.
+  startOffset Int
+  endOffset   Int
+  /// The parse layer's block id, so a duplicate paragraph cannot be
+  /// re-pointed. Empty means "written before the column existed" and is
+  /// treated as unchecked rather than as a mismatch.
+  blockId     String  @default("")
+  /// The marked text, re-derived and compared server-side on create.
+  selectionText String
+  /// sha256 of the normalised selection text, so a later version can offer
+  /// "this mark also exists in the new text".
+  selectionHash String @default("")
+  /// "yellow" | "green" | "blue" | "red"
+  color       String
+  /// "watercolor" | "line" | "curve"
+  style       String  @default("watercolor")
+  /// The reader's own remark on the marked passage, plain text.
+  note        String  @default("")
+  /// The local record was made unprovable by an edit; kept, not painted.
+  detached    Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  /// Client-supplied idempotency key, unique per article: a retried create
+  /// returns the row the first attempt wrote instead of a second mark.
+  clientKey   String?
+  deletedAt   DateTime?
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, clientKey])
+  @@index([ownerUserId, articleId])
+  @@index([articleId, paragraphIndex])
+  @@map("highlight")
+}
+
+model ArticleVersion {
+  id               String   @id @default(cuid())
+  articleId        String
+  /// 1-based, monotonic per article. Slice 1 only ever writes version=1;
+  /// slice 2 will write version=2 on refresh while keeping the old row.
+  version          Int
+  /// sha256 of joined block hashes (same as `ParsedDocument.textHash`).
+  /// Cheap whole-document identity for the export endpoint.
+  textHash         String
+  /// Where the text came from, as a free string rather than a closed enum.
+  ///
+  /// For the import routes this is the shared contract's `ExtractorId`
+  /// ("html-readability" / "markdown-remark") — which parser produced the
+  /// document. For `POST /api/articles/sync` it is the `ArticleSyncSource` the
+  /// client named ("browser-jina" / "server-jina" / "server-readability" /
+  /// "local"), because on that path the browser's extractor produced the
+  /// blocks and the server never parsed anything. The two sets are disjoint on
+  /// purpose: one answers "which of our parsers", the other "which channel".
+  source           String
+  /// Pipeline version (parse layer `EXTRACTOR_VERSION`); stored so future
+  /// migrations can decide whether to re-parse an old version.
+  extractorVersion String
+  importedAt       DateTime @default(now())
+  /// Slice 1 always writes one row with `isCurrent = true` and never
+  /// flips it. Slice 2's refresh will mark the new row current and clear
+  /// the old one in the same transaction.
+  isCurrent        Boolean  @default(true)
+  /// The exact input this version was parsed from: the Markdown or HTML the
+  /// user pasted, or the content a text refresh re-parsed.
+  ///
+  /// Populated for pasted imports only. A URL version leaves this null on
+  /// purpose: its source is still reachable upstream, so it can be fetched
+  /// again, and keeping a copy of every fetched third-party page would mean
+  /// storing the web's HTML at 2 MB per version for no capability the
+  /// re-fetch does not already provide.
+  ///
+  /// Before this column existed nothing anywhere kept the source, and the
+  /// consequences were structural rather than cosmetic:
+  ///
+  ///  - `POST /api/articles/:id/refresh` requires the client to send the
+  ///    source again (`ArticleRefreshRequest.content`). For a pasted
+  ///    article that source had already been discarded on both sides, so
+  ///    the article could never be re-parsed — which also meant an
+  ///    extractor improvement could never reach it.
+  ///  - the in-Reader Markdown editor has nothing to open for editing.
+  ///
+  /// Null also means "written before this column existed". Readers must treat
+  /// it as "source unavailable" and fall back to asking the user, never as
+  /// empty text.
+  ///
+  /// The body is untrusted input from a third party. It is only ever
+  /// handed back to the parse layer — never rendered as HTML. An editor
+  /// edits it in a `<textarea>`, not via `innerHTML`.
+  sourceText       String?
+
+  article   Article     @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  paragraphs Paragraph[]
+
+  @@unique([articleId, version])
+  @@index([articleId, isCurrent])
+  @@map("article_version")
+}
+
+model Paragraph {
+  id         String   @id @default(cuid())
+  versionId  String
+  /// 1-based position inside the version. Matches the source block's
+  /// `index` so the client can render them in the same order.
+  blockIndex Int
+  /// The parse layer's `ContentBlock.id` (`b<index>-<hash8>`), stored
+  /// verbatim. This is the anchor that makes two paragraphs with
+  /// identical text distinguishable: the note records the block id it
+  /// was created against, and the route refuses a request whose block
+  /// id does not match the row at that index. Derivable from
+  /// `(blockIndex, hash)`, but stored rather than recomputed so a
+  /// future change to the id scheme cannot silently re-point existing
+  /// anchors.
+  blockId    String
+  /// "heading" | "paragraph" | "listItem" | "code" | "quote"
+  type       String
+  /// Normalised plain text — the same string the parser produced.
+  text       String
+  /// sha256 over the normalised text (matches `ContentBlock.hash`).
+  hash       String
+  /// Heading level 1..6. Null for non-heading blocks.
+  level      Int?
+  /// Fenced-code language. Null when not declared.
+  lang       String?
+  /// Ordered vs bullet list. Null for non-listItem blocks.
+  ordered    Boolean?
+  /// 0-based nesting depth of a list item. Null for non-listItem blocks and
+  /// for rows written before nesting was recorded (readers treat null as 0).
+  depth      Int?
+  /// Task-list item and its ticked state (`- [ ]` / `<input type=checkbox>`).
+  /// Null for ordinary list items.
+  task       Boolean?
+  checked    Boolean?
+  /// Image source / alt / title. Null for every non-image block; also null
+  /// for rows written before image blocks existed, which readers treat as
+  /// "no image" rather than an error.
+  src        String?
+  alt        String?
+  title      String?
+  /// Table cells, row-major (`string[][]`, first row is the header). Null for
+  /// every non-table block. `text` still carries a flat join of the cells
+  /// because every row needs a non-empty `text` for `hash`/`textHash`.
+  rows       Json?
+  /// Inline emphasis (bold / italic / inline code / strikethrough / link)
+  /// as offsets onto this row's own `text`: a JSON array of
+  /// `InlineSpan` from `shared/contracts/content.ts`.
+  ///
+  /// Stored as offsets rather than as a run tree on purpose. `text`
+  /// remains the only statement of *what the characters are*; this
+  /// column only says how part of them is drawn. So populating it does
+  /// not change `hash`, does not change `textHash`, and does not
+  /// invalidate anything anchored on this paragraph — including the
+  /// server-side selection check in `lib/selection.ts`, which slices
+  /// `text` and never looks here.
+  ///
+  /// Null means "no inline emphasis", which is also what every row
+  /// written before this column existed means. Readers must treat null
+  /// as plain text, not as an error.
+  spans      Json?
+
+  version ArticleVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, blockIndex])
+  @@map("paragraph")
+}
+
+// ── Phase 3 (slice 3): notes + messages ────────────────────────────────────
+//
+// Notes are the user-generated annotations anchored on a specific
+// `(article_version, paragraph)` pair. They are deliberately bound to
+// `articleVersionId` (not just `articleId`) so that a refresh that
+// creates a new version leaves the old notes readable against the old
+// text — that is the plan's "重新抓取生成新版本，旧笔记仍能读原版本"
+// gate. The cross-version anchor is `selectionHash` (sha256 over the
+// normalised selection text) so a future "this note was also asked on
+// the new version" feature has something stable to match against.
+//
+// Messages are the turns of the AI conversation on a note. The
+// original question is `role = "user"`, the answer is `role =
+// "assistant"`, follow-ups append. A `sequence` 1-based index makes
+// order explicit and survives same-instant inserts.
+//
+// No `generation_job` / `usage_ledger` here — phase 4 owns those.
+// This slice only persists the data; the AI call still happens on the
+// client (the existing `streamChat` mock) and the result is POSTed
+// back to the note as the first assistant message.
+
+model Note {
+  id          String   @id @default(cuid())
+  /// Session user id; the cross-user gate lives in every route's
+  /// `findFirst({ where: { id, ownerUserId } })`.
+  ownerUserId String
+  articleId   String
+  /// Anchors the note to a specific parse run. A refresh writes a new
+  /// `ArticleVersion` and bumps `isCurrent`; old notes are untouched
+  /// and still bound to the version they were created against.
+  versionId   String
+  /// 1-based, matches `paragraph.blockIndex` in the version. Retained as
+  /// the *primary* anchor so a note created before the cross-segment
+  /// columns existed stays readable; for a multi-paragraph selection it
+  /// equals `startParagraphIndex`.
+  paragraphIndex Int
+  /// Half-open range the user actually dragged, over the version's
+  /// paragraphs. `[startParagraphIndex:startOffset,
+  /// endParagraphIndex:endOffset)`. For a single-paragraph selection
+  /// both paragraph fields are the same and only the offsets differ.
+  startParagraphIndex Int @default(1)
+  startOffset Int @default(0)
+  endParagraphIndex Int @default(1)
+  endOffset Int @default(0)
+  /// The parse-layer block ids at the two ends of the range. Empty
+  /// string for rows written before the column existed (the backfill
+  /// cannot invent them), and the route treats an empty value as
+  /// "unchecked" rather than as a mismatch, so those rows stay valid.
+  startBlockId String @default("")
+  endBlockId   String @default("")
+  /// "explain" | "ask"; carries the UI meaning, not the prompt shape.
+  type        String
+  /// The text the user highlighted. Server-side validation re-derives
+  /// this from the version's `paragraph.text` so a tampered client
+  /// cannot anchor a note on a paragraph that does not exist or
+  /// pretend the selection was a different string than the parser
+  /// produced.
+  selectionText String
+  /// sha256 of the normalised selection text. Stable across versions,
+  /// so slice 4 can offer "this note also exists in the new version".
+  selectionHash String
+  /// The prompt sent to the model (or, for `type = "explain"`, the
+  /// fixed "explain this" template).
+  question     String
+  /// The full answer text. Streams on the client first, then lands
+  /// here as the initial assistant message. Empty until the stream
+  /// completes or the user gives up.
+  answer       String   @default("")
+  /// Which model produced the answer. "mock" when the client ran
+  /// without an API key; otherwise the model id from the AI SDK.
+  model        String   @default("mock")
+  /// Lifecycle marker; "running" while the client streams, "succeeded"
+  /// / "failed" / "cancelled" once the stream finishes. Phase 4 will
+  /// tie this to `generation_jobs.status`.
+  status       String   @default("running")
+  /// This note's own highlight colour ("yellow" | "green" | "blue" |
+  /// "red"), frozen from the reader's toolbar when they asked.
+  ///
+  /// Nullable rather than defaulted, because every row written before
+  /// this column existed must keep reading as "no colour chosen" and
+  /// render with the default note blue — the same treatment
+  /// `paragraph.src` gets for image blocks. A colour is a property of
+  /// *this* note, never of the toolbar: two notes over adjacent text
+  /// asked under different colours must stay that way.
+  color        String?
+  createdAt    DateTime @default(now())
+  /// Null until the stream completes. Used for "in progress" badges.
+  completedAt  DateTime?
+  /// Client-supplied idempotency key, unique per article; see
+  /// `Article.clientKey` for why the migration needs it.
+  clientKey    String?
+
+  messages Message[]
+
+  @@unique([articleId, clientKey])
+  @@index([ownerUserId, articleId])
+  @@index([versionId])
+  @@index([articleId, paragraphIndex])
+  @@map("note")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  noteId    String
+  /// "user" | "assistant"
+  role      String
+  /// The message body. The first user message is the question; the
+  /// first assistant message is the streamed answer; later turns
+  /// alternate as the user asks follow-ups.
+  content   String
+  /// 1-based per note. Persisted explicitly so two turns inserted in
+  /// the same millisecond still have a stable order.
+  sequence  Int
+  createdAt DateTime @default(now())
+  /// Client-supplied idempotency key, unique per note. A retried append
+  /// that lost its response returns the message the first attempt wrote
+  /// instead of adding a duplicate turn — which for an *answer* means
+  /// duplicated content the user cannot remove, and double the context
+  /// on the next follow-up.
+  clientKey String?
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, clientKey])
+  @@unique([noteId, sequence])
+  @@index([noteId])
+  @@map("message")
+}
+
+/// One phone-number verification challenge, as `PhoneOtpService` created it.
+///
+/// Durable on purpose: the kit's in-memory store is branded test-only because
+/// a second process cannot see it, and a restart would silently invalidate a
+/// code the user is holding. The columns are exactly what the kit's
+/// `OtpChallengeStore` contract needs and nothing else:
+///
+///   - `phoneRef` and `codeHash` are HMAC digests, so a database dump yields
+///     neither a usable number nor a usable code;
+///   - `generation` is a database sequence, monotonic, which is what makes
+///     `revoke`/`activate` conditional on the reservation they were given
+///     rather than on an id that a new send could reuse;
+///   - `state` is `pending` before the SMS provider accepted the message and
+///     `active` after — the two-phase shape is what lets a failed send roll
+///     back its own reservation without touching a newer one;
+///   - `attempts` is committed with the comparison that consumed it, so a
+///     wrong code costs an attempt even though the request fails.
+///
+/// `expiresAt`/`createdAt` are epoch milliseconds as `BIGINT` because the kit
+/// works in milliseconds and a `DateTime` round trip would silently truncate
+/// a clock the tests control. Expired rows are pruned lazily.
+model PhoneOtpChallenge {
+  id          String   @id
+  /// Monotonic per table; the kit only requires monotonic per
+  /// (purpose, phoneRef), which a global sequence also satisfies.
+  generation  Int      @default(autoincrement()) @unique
+  purpose     String
+  phoneRef    String
+  codeHash    String
+  /// "pending" | "active"
+  state       String
+  attempts    Int      @default(0)
+  maxAttempts Int
+  createdAt   BigInt
+  expiresAt   BigInt
+
+  @@index([purpose, phoneRef, state])
+  @@index([expiresAt])
+  @@map("phone_otp_challenge")
+}
+

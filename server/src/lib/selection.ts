@@ -6,12 +6,10 @@
 /**
  * Server-side selection validation for notes.
  *
- * The server checks that a selection really does come from the document
- * version the client says it is reading, and supports both start/end
- * paragraphs with offsets and start/end block ids. Text the client constructs
- * by itself is never taken as evidence: every check below re-derives the
- * expected text from rows the client did not write, so duplicate paragraphs
- * stay distinguishable and a selection inside one paragraph stays valid.
+ * The plan's requirement is "服务端校验选区确实来自该用户当前文章版本;
+ * 支持起止段落及偏移，不接受前端自行构造的任意原文作为可信证据", plus
+ * the phase-3 follow-up "补跨段坐标（起止 block ID/offset）及服务端版本/
+ * 范围/选区校验；重复段落可区分，段内局部选择仍有效".
  *
  * There are two shapes the API accepts, and they get two different rules:
  *

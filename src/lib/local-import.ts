@@ -4,12 +4,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /**
- * Local (in-browser) article import — the offline half of the import design.
+ * Local (in-browser) article import — the offline half of the dual-channel
+ * design.
  *
- * Pasted text and Markdown are parsed in the browser into the unified block
- * format, saved as a local article, and opened in the Reader immediately.
- * Anonymous and signed-in readers alike do not wait for a backend, and a paste
- * issues no extraction request.
+ * The product rule this implements: "粘贴文字/Markdown在浏览器解析为统一正文块、
+ * 生成本机文章、保存并立即进入Reader；匿名和登录用户均不等待后端" and "粘贴
+ * 正文在浏览器解析…不发提取请求".
  *
  * So this module has **no network path at all**. Not "it usually does not call
  * the server": there is no fetch, no base URL, no transport to inject. A caller
@@ -21,9 +21,9 @@
  * Scope: text and Markdown. HTML paste is deliberately *not* handled locally.
  * The server's HTML path runs Readability over a jsdom document, and a browser
  * port would be a second DOM walker to keep in step with `html.ts`; the
- * requirement is only that *text/Markdown* reads offline. HTML pastes keep
- * going through `POST /api/anonymous/extract` (`kind: "html"`), which is
- * already the behaviour today.
+ * dual-channel requirement is only that *text/Markdown* reads offline. HTML
+ * pastes keep going through `POST /api/anonymous/extract` (`kind: "html"`),
+ * which is already the behaviour today. See the handoff doc §7.5.
  */
 
 import type { ParsedDocument, ParseResult } from "../../shared/contracts/index.js";
@@ -125,8 +125,8 @@ function megabytes(bytes: number): number {
  * Turn pasted text / Markdown into a unified `ParsedDocument`.
  *
  * Synchronous by design. The caller can save the article and navigate in the
- * same tick it got the result, which is what makes a paste feel immediate and
- * what an awaited round trip cannot give.
+ * same tick it got the result, which is what "立即进入Reader" asks for and what
+ * an awaited round trip cannot give.
  *
  * The empty and oversized cases are decided *here*, before parsing, so the
  * user gets a local validation message rather than a generic failure — and so

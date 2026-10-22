@@ -15,21 +15,32 @@ npm ci --ignore-scripts --no-audit --no-fund
 npm run browser:install     # Chromium, needed only for the browser suites
 ```
 
-Node 24.12.0 and npm 11.6.2. No environment file is required; see
-`.env.example` for the variables that exist and their defaults.
+Node 24.12.0 and npm 11.6.2. The local reader needs no environment file; the
+optional service reads the variables documented in `.env.example` (all of them
+have working local defaults).
 
 ## What to run before calling a change done
 
 ```bash
-npm run typecheck           # frontend, then tests
+npm run typecheck           # frontend, server and tests
 npm run test:unit
 npm run acceptance:base     # adds the production build, the service tests, a real browser
 ```
 
 `acceptance:base` is the gate that matters: it builds the artifact that would
-ship and then drives it. Pass `EVIDENCE_DIR=<path>` to keep its logs,
-screenshots and fixtures out of the working copy; by default they land in
-`artifacts/`, which is gitignored.
+ship and then drives it. Its logs, screenshots and fixture output land in
+`docs/evidence/base-reproducibility/`, which is gitignored.
+
+The database-backed suites need the local database and proxy first:
+
+```bash
+npm run db:up && npm run caddy:setup
+npm run test:phase1         # or test:integration for all three
+npm run verify              # the whole serial gate
+```
+
+`verify -- --all` keeps going after a failing step so you get every exit code
+instead of a fail-fast stop.
 
 Touch these areas and a run should also include `npm run test:browser:byok`:
 
@@ -63,9 +74,9 @@ rejected regardless of what else it improves.
 * **Local first.** Reading, saving, highlighting, annotating, backing up and
   restoring must keep working with no account, no network and no database. A
   feature must not wait on a remote call to complete.
-* **The optional adapter is optional.** Nothing may branch on whether a cloud
-  implementation is installed in order to *read*. See the five rules at the top
-  of `src/lib/cloud/contract.ts`.
+* **Accounts stay optional on the read path.** Signing in adds sync, but the
+  reader must work with the service down and no session; nothing that renders an
+  article may block on `/api`.
 * **No credential anywhere but the browser.** A key must not reach a build, a
   log, a backup, an export, or a request body built by this application's own
   code.

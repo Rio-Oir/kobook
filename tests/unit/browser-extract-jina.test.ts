@@ -259,7 +259,11 @@ test("a fetch rejection is reported as 'network' (no claim about DNS vs CORS)", 
   // is honest about not being able to distinguish DNS failure from a
   // CORS rejection. The contract is "names DNS *and* CORS as
   // possibilities", not "asserts either one is the cause".
-  assert.match(r.failure.message, /无法直连/);
+  // Pinned to the part that carries the contract, not to the whole sentence:
+  // the wording of the opening phrase was revised ("无法直连抓取服务" →
+  // "抓取服务连接失败") while this assertion kept the old text and failed for a
+  // reason that had nothing to do with what it is checking.
+  assert.match(r.failure.message, /连接失败/);
   assert.match(r.failure.message, /DNS/);
   assert.match(r.failure.message, /跨域|CORS/);
 });

@@ -6,7 +6,7 @@
 /**
  * Markdown -> unified content blocks, via remark (unified + remark-parse +
  * remark-gfm) rather than the regex/character-threshold guessing used by the
- * character-threshold guessing this reader used before.
+ * current frontend parser (audit P1#3).
  *
  * The output contract is identical to the HTML path: same `ContentBlock`
  * shape, same id/hash rules, same refusal to emit an empty document.
@@ -22,6 +22,7 @@ import type {
   ParsedDocument,
   ParseResult,
 } from "../../../../shared/contracts/index.js";
+import { tableBlockText } from "../../../../shared/contracts/index.js";
 import {
   BlockCollector,
   EXTRACTOR_VERSION,
@@ -183,19 +184,57 @@ function listItemInline(item: ListItem, out: InlineTextBuilder): void {
   }
 }
 
-function walkList(list: List, ctx: WalkContext, out: BlockCollector): void {
+function walkList(
+  list: List,
+  ctx: WalkContext,
+  out: BlockCollector,
+  depth = 0,
+): void {
   const ordered = list.ordered ?? false;
   for (const item of list.children) {
     const builder = new InlineTextBuilder();
     listItemInline(item, builder);
-    addMeasured(out, "listItem", listItemOwnText(item), builder, { ordered });
+    // `checked` is `null` for an ordinary list item and a boolean for a GFM
+    // task item (`- [ ]` / `- [x]`). `mdast-util-to-string` does not include
+    // the checkbox in the text, so the offsets are unaffected.
+    const isTask = typeof item.checked === "boolean";
+    addMeasured(out, "listItem", listItemOwnText(item), builder, {
+      ordered,
+      depth,
+      ...(isTask ? { task: true, checked: item.checked === true } : {}),
+    });
     for (const child of item.children) {
-      if (child.type === "list") walkList(child, ctx, out);
+      if (child.type === "list") walkList(child, ctx, out, depth + 1);
       else if (child.type === "blockquote") {
         walkNodes(child.children, { ...ctx, inQuote: true }, out);
       }
     }
   }
+}
+
+function collectImages(node: unknown): Array<{ url: string; alt?: string; title?: string }> {
+  const found: Array<{ url: string; alt?: string; title?: string }> = [];
+  const visit = (current: unknown): void => {
+    if (!current || typeof current !== "object") return;
+    const value = current as {
+      type?: string;
+      url?: unknown;
+      alt?: unknown;
+      title?: unknown;
+      children?: unknown[];
+    };
+    if (value.type === "image" && typeof value.url === "string" && value.url.length > 0) {
+      found.push({
+        url: value.url,
+        ...(typeof value.alt === "string" && value.alt.length > 0 ? { alt: value.alt } : {}),
+        ...(typeof value.title === "string" && value.title.length > 0 ? { title: value.title } : {}),
+      });
+      return;
+    }
+    if (Array.isArray(value.children)) for (const child of value.children) visit(child);
+  };
+  visit(node);
+  return found;
 }
 
 function walkNodes(nodes: readonly RootContent[], ctx: WalkContext, out: BlockCollector): void {
@@ -205,9 +244,21 @@ function walkNodes(nodes: readonly RootContent[], ctx: WalkContext, out: BlockCo
         addFromNode(out, ctx.inQuote ? "quote" : "heading", node, { level: node.depth });
         break;
 
-      case "paragraph":
+      case "paragraph": {
+        const images = collectImages(node);
+        if (images.length > 0) {
+          for (const image of images) {
+            out.add("image", image.alt?.trim() || "图片", {
+              src: image.url,
+              ...(image.alt ? { alt: image.alt } : {}),
+              ...(image.title ? { title: image.title } : {}),
+            });
+          }
+          break;
+        }
         addFromNode(out, ctx.inQuote ? "quote" : "paragraph", node);
         break;
+      }
 
       case "code":
         out.add("code", node.value, { lang: node.lang ?? null });
@@ -222,15 +273,19 @@ function walkNodes(nodes: readonly RootContent[], ctx: WalkContext, out: BlockCo
         break;
 
       case "table": {
-        // GFM table: one list item per row, cells joined readably.
-        for (const row of node.children) {
-          const cells = row.children.map((cell) => normalizeProse(toString(cell)));
-          out.add("listItem", cells.join(" | "), { ordered: false });
-        }
+        // GFM table: cells become a real table block. The first row is the
+        // header by GFM's own definition, which the renderer relies on.
+        const rows = node.children.map((row) =>
+          row.children.map((cell) => normalizeProse(toString(cell))),
+        );
+        if (rows.length > 0) out.add("table", tableBlockText(rows), { rows });
         break;
       }
 
       case "thematicBreak":
+        // `text` is never empty for a retained block (it is what `hash` is
+        // computed over), so a rule carries a fixed label rather than "".
+        out.add("hr", "分隔线");
         break;
 
       case "html": {

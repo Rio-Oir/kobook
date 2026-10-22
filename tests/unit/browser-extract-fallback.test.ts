@@ -233,9 +233,13 @@ test("fetchViaServerFallback: a slow fetch that exceeds the deadline is 'timeout
   assert.equal(r.failure.kind, "timeout");
 });
 
-test("SERVER_FALLBACK_DEADLINE_MS is longer than the route's own 20 s budget", () => {
+test("SERVER_FALLBACK_DEADLINE_MS stays just above the route's own 12 s budget", () => {
   // The number is asserted, not the route's, so a tightening of the
-  // route does not silently flip the outer safety net.
-  assert.equal(SERVER_FALLBACK_DEADLINE_MS, 30_000);
-  assert.ok(SERVER_FALLBACK_DEADLINE_MS > 20_000);
+  // route does not silently flip the outer safety net. The route budget
+  // (`ANONYMOUS_REQUEST_BUDGET_MS`, 12 s) is private to the route module, so
+  // the relation is written out here: the client must outlast the server's
+  // answer, and by as little as possible — the 18 s of slack the 30 s value
+  // used to add were pure waiting on a reply that had already been abandoned.
+  assert.equal(SERVER_FALLBACK_DEADLINE_MS, 15_000);
+  assert.ok(SERVER_FALLBACK_DEADLINE_MS > 12_000);
 });

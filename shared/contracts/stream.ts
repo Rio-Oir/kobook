@@ -6,11 +6,11 @@
 /**
  * Streaming (SSE) event contract.
  *
- * This module describes the shape of the events and their wire encoding. The
- * transport (Fastify → proxy → client) delivers events incrementally and
- * propagates cancellation; the generation *lifecycle* that emits these
- * (`pending → running → succeeded / failed / cancelled / interrupted`) is a
- * separate concern and is not implemented here.
+ * Phase 1 scope: the shape of the events and their wire encoding. The
+ * generation *lifecycle* that emits these (`pending → running → succeeded /
+ * failed / cancelled / interrupted`) is phase 4 work; phase 1 only proves the
+ * transport (Fastify → real Caddy → client) delivers events incrementally and
+ * that cancellation propagates.
  */
 
 export type StreamEventType =
@@ -44,8 +44,8 @@ export interface DeltaEvent extends StreamEventBase {
 
 export interface CompletedEvent extends StreamEventBase {
   type: "completed";
-  /** Full text. A generator that produces real content must persist it before
-   * emitting completion; this module only carries the shape. */
+  /** Full text. Business generators must persist before completion (phase 4);
+   * phase 1 emits only a synthetic transport sample held in bounded memory. */
   text: string;
   finishReason: "stop" | "length" | "unknown";
 }
@@ -106,8 +106,7 @@ export const SSE_HEADERS: Readonly<Record<string, string>> = {
   "content-type": "text/event-stream; charset=utf-8",
   "cache-control": "no-cache, no-transform",
   connection: "keep-alive",
-  // Defensive: tells intermediaries not to buffer a streaming response. Some
-  // proxies flush immediately by default; others do not, and this costs
-  // nothing where it is redundant.
+  // Defensive: tells intermediaries not to buffer. Caddy needs no such hint
+  // (its default flush_interval is immediate) but other proxies do.
   "x-accel-buffering": "no",
 };

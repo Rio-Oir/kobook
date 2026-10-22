@@ -8,11 +8,10 @@
  * `selectionText` is a legitimate excerpt of the paragraph it claims to
  * come from.
  *
- * The server must check that a selection really comes from the document
- * version the client claims, supporting start/end paragraphs with offsets,
- * and must never take text the client constructed by itself as evidence. The
- * distinction that matters is *selection* versus *paragraph*: a reader
- * highlights a word, a phrase or a sentence, not always a whole paragraph.
+ * The plan says "服务端校验选区确实来自该用户当前文章版本; 支持起止段落及偏移,
+ * 不接受前端自行构造的任意原文作为可信证据". The distinction that matters
+ * is *选区* (selection) vs *段落* (paragraph): a reader highlights a word,
+ * a phrase or a sentence, not always the whole paragraph.
  *
  * These tests exist because the first implementation required the
  * selection to **equal** the whole normalised paragraph. That passes a
@@ -55,9 +54,9 @@ test("a selection wrapped in stray whitespace still matches", () => {
 });
 
 test("a short Chinese fragment is not filtered out by length", () => {
-  // The defect this guards against was a parser that dropped every block
-  // shorter than 20 characters. The selection rule must not reintroduce a
-  // length threshold: one character is a legitimate selection.
+  // The audit's P1#3 was a parser that dropped every block shorter than
+  // 20 characters. The selection rule must not reintroduce a length
+  // threshold: one character is a legitimate selection.
   const verdict = validateSelection(PARAGRAPH, "训");
   assert.equal(verdict.ok, true, "a one-character selection is legitimate");
 });

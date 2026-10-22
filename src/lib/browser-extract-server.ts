@@ -6,12 +6,12 @@
 /**
  * Channel 2: the controlled backend fallback, `POST /api/anonymous/extract`.
  *
- * Used **only** after channel 1 has failed, and it is the second choice by
- * construction: the browser must not be able to redirect the request. Where
- * the backend gets its content from — and with what credentials — is fixed by
- * the deployment, never by the caller, so this module sends the *target URL*
- * (or the pasted text) and nothing about how to fetch it: no proxy base, no
- * key, no fetch options. The route's body schema has
+ * Used **only** after channel 1 has failed. The plan is explicit that the
+ * backend is the second choice and that the browser must not be able to
+ * redirect it: "浏览器成功后上传正文时…" and "Jina 的服务器备用地址和密钥固定
+ * 在部署配置，浏览器不得指定任意抓取代理地址". This module therefore sends the
+ * *target URL* (or the pasted text) and nothing about how to fetch it — no Jina
+ * base, no key, no proxy. The route's body schema has
  * `additionalProperties: false` on the server side too, so a request carrying
  * such a field is a 400 rather than a silently ignored override.
  *
@@ -27,10 +27,10 @@
  *     settings object in here is a bug somebody should see in development, not
  *     a credential that quietly travels once and is never noticed.
  *
- * Any other authenticated write in the product applies the same rule to its own
- * payload, and the two are deliberately not shared code: this one guards an
- * unauthenticated extraction request, that one guards an authenticated write.
- * They differ in what they may carry, so they change for different reasons.
+ * The account/sync line applies the same rule to its own upload payload, and
+ * the two are deliberately not shared code: this one guards an unauthenticated
+ * extraction request, that one guards an authenticated write. They should be
+ * able to change for different reasons — and now they live in different trees.
  */
 
 import { ROUTES } from "../../shared/contracts/index.js";
@@ -43,14 +43,19 @@ import type {
 import { extractFailure, type ExtractFailure } from "./browser-extract-errors.js";
 
 /**
- * Deadline for the fallback request.
+ * Deadline for the server extraction request.
  *
- * Longer than the route's own 20 s whole-request budget on purpose: the server
+ * Longer than the route's own 12 s whole-request budget on purpose: the server
  * should be the one to time out, because it can say *why* ("匿名抓取超时。")
  * and a client-side abort would replace that with a generic message. This is
  * the outer net for a request that somehow stalls below that budget.
+ *
+ * It was 30 s. Nothing the route does fits in that window — the route aborts at
+ * 12 s — so the extra 18 s only ever meant "the browser waits quietly after the
+ * server has already given up", which is the slow-and-unstable reading users
+ * reported. 15 s leaves the route's own answer enough room to arrive first.
  */
-export const SERVER_FALLBACK_DEADLINE_MS = 30_000;
+export const SERVER_FALLBACK_DEADLINE_MS = 15_000;
 
 /** Fields the extract route accepts, in the order they are written. */
 export const EXTRACT_FIELD_WHITELIST = ["kind", "content", "title"] as const;
@@ -130,7 +135,7 @@ function isParsedDocument(value: unknown): value is ParsedDocument {
  * The shared envelope is `{ error: { code, message, requestId } }`. Its
  * messages are user-facing Chinese written for exactly these cases, so they
  * beat anything this module could invent — and returning one is how the UI
- * avoids the `Failed to fetch` dead end. The body is still
+ * avoids the `Failed to fetch` dead end the plan calls out. The body is still
  * parsed defensively: a proxy or an old build can answer with HTML.
  */
 async function readServerMessage(response: Response): Promise<string | null> {

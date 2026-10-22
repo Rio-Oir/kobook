@@ -39,6 +39,7 @@ import {
   groupBlocks,
   headingTag,
   outlineOf,
+  titleSizeClass,
   type BlockKind,
 } from "../../src/lib/blocks.js";
 import { PARAGRAPH_MARKER_ATTR, rangeToOffsets } from "../../src/lib/text-offset.js";
@@ -442,4 +443,85 @@ test("offset round trip: a selection that starts inside emphasis still lands rig
   assert.ok(offsets);
   assert.equal(text.slice(offsets.start, offsets.end), "体 尾");
   assert.deepEqual(offsets, { start: 4, end: 7 });
+});
+
+
+/**
+ * Title size steps.
+ *
+ * The exact class strings are not pinned — a Tailwind class is a
+ * presentation detail and asserting it verbatim would make every
+ * cosmetic tweak a test failure. What is pinned is the *behaviour* the
+ * step exists for: a longer title never gets a larger size than a
+ * shorter one, the largest step is no bigger than the fixed size it
+ * replaced, and "long" is measured in ems rather than in characters, so
+ * a Chinese title is not treated as short just because it has fewer
+ * code points than an English one.
+ */
+
+/** The `clamp()` lower bound of a size class, in rem. */
+function minRem(className: string): number {
+  const match = className.match(/clamp\(([\d.]+)rem/);
+  assert.ok(match, `expected a clamp() in "${className}"`);
+  return Number(match[1]);
+}
+
+/** The `clamp()` upper bound of a size class, in rem. */
+function maxRem(className: string): number {
+  const match = className.match(/clamp\([^,]+,[^,]+,\s*([\d.]+)rem\)/);
+  assert.ok(match, `expected a three-stop clamp() in "${className}"`);
+  return Number(match[1]);
+}
+
+test("title size: a longer title never gets a larger step", () => {
+  // One Han character is two width units, so these are 26, 40, 80 and
+  // 120 units — one sample inside each of the four steps. Written as
+  // repeats rather than as realistic titles so the arithmetic is
+  // checkable at a glance; a realistic title has to be counted by hand
+  // and silently drifts into the wrong step when the thresholds move.
+  const titles = [13, 20, 40, 60].map((n) => "一".repeat(n));
+  const sizes = titles.map((t) => minRem(titleSizeClass(t)));
+  for (let i = 1; i < sizes.length; i++) {
+    assert.ok(
+      sizes[i]! < sizes[i - 1]!,
+      `step ${i} (${sizes[i]}) should be smaller than step ${i - 1} (${sizes[i - 1]})`,
+    );
+  }
+});
+
+test("title size: no title is set larger than the fixed size it replaced", () => {
+  // The h1 used to be `text-4xl md:text-5xl` — 2.25rem on a phone, 3rem
+  // from the `md` breakpoint up. The steps only ever move a title down.
+  for (const title of ["短", "一".repeat(20), "a ".repeat(40)]) {
+    const cls = titleSizeClass(title);
+    assert.ok(minRem(cls) <= 2.25, `${minRem(cls)}rem floor exceeds the old phone size`);
+    assert.ok(maxRem(cls) <= 3, `${maxRem(cls)}rem ceiling exceeds the old desktop size`);
+  }
+});
+
+test("title size: width is counted in ems, so a Chinese title is not short", () => {
+  // 13 Han characters and 26 Latin characters are the same width, and
+  // must land on the same step. This is the whole reason the count is
+  // not `title.length`.
+  const han13 = titleSizeClass("一".repeat(13));
+  const latin26 = titleSizeClass("a".repeat(26));
+  assert.equal(han13, latin26);
+
+  // One character more of Han is a whole step wider.
+  assert.notEqual(titleSizeClass("一".repeat(14)), han13);
+  assert.ok(minRem(titleSizeClass("一".repeat(14))) < minRem(han13));
+});
+
+test("title size: mixed Chinese and Latin add up", () => {
+  // "AI 时代的阅读" is 5 Latin code points plus 5 Han characters: the
+  // Latin half counts as 5 units and the Han half as 10.
+  assert.equal(titleSizeClass("AI 时代的阅读"), titleSizeClass("a".repeat(13)));
+});
+
+test("title size: an empty or whitespace title still returns a step", () => {
+  // The store can hold a title the parser failed to find. The reader
+  // must render something rather than throw on the way to an error
+  // boundary.
+  assert.equal(titleSizeClass(""), titleSizeClass("短"));
+  assert.equal(titleSizeClass("   "), titleSizeClass("短"));
 });

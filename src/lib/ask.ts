@@ -5,18 +5,19 @@
 
 // Ask: a custom question about a passage. Same caching pattern as explain.
 
-import type { Article } from "./types";
+import type { Article, Paragraph } from "./types";
 import { buildStableContext, buildAskQuestion } from "./context";
 import type { ChatMessage } from "./explain";
 
 export function buildAskMessages(
   article: Article,
+  paragraphs: readonly Paragraph[],
   selectionText: string,
   userQuestion: string,
   priorMessages: ChatMessage[] = [],
 ): ChatMessage[] {
   return [
-    { role: "system", content: buildStableContext(article) },
+    { role: "system", content: buildStableContext(article, paragraphs) },
     ...priorMessages,
     {
       role: "user",

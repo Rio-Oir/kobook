@@ -1,0 +1,41 @@
+{
+  "name": "KoBook 中文阅读器",
+  "short_name": "KoBook",
+  "description": "粘贴链接或导入 PDF、EPUB、DOCX，选中不懂的词句就地解释。文章和笔记默认保存在你的浏览器里，只有你主动提问时才联网。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "id": "/reader/",
+  "start_url": "/reader/",
+  "scope": "/reader/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F06E62",
+  "theme_color": "#F06E62",
+  "categories": ["books", "education", "productivity"],
+  "icons": [
+    {
+      "src": "/reader/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/reader/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/reader/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/reader/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

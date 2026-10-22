@@ -10,7 +10,7 @@
  * server module cannot be imported here: it is written for NodeNext and pulls
  * its types through `../../../../shared/contracts/index.js`, which the browser
  * bundle has no reason to resolve — and more to the point, the browser must not
- * depend on `server/` at all, which pulls in jsdom and Node built-ins.
+ * depend on `server/` at all (server 依赖 node/jsdom，见交接文档 §3).
  *
  * So the algorithm is reproduced, not re-derived. The rules that make the two
  * implementations interchangeable are asserted, not assumed:

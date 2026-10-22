@@ -77,12 +77,22 @@ function useSessionSettle(): void {
 const ARTICLE = {
   id: "local-abc1234567890",
   title: "示例文章",
-  paragraphs: [{ index: 1, text: "第一段正文。", hash: "deadbeef0123" }],
   createdAt: 1_700_000_000_000,
 };
 
-function seedArticle(): string {
-  useStore.getState().saveArticle({ ...ARTICLE, paragraphs: [...ARTICLE.paragraphs] });
+const PARAGRAPHS = [{ index: 1, text: "第一段正文。", hash: "deadbeef0123" }];
+
+/**
+ * Save an article through the store and hand back its id.
+ *
+ * Awaited, because the text is a body now and the write is asynchronous. The
+ * record and the in-memory body are installed synchronously inside
+ * `saveArticle`, so every synchronous assertion that follows still sees them —
+ * what the await adds is that a storage refusal surfaces here instead of as an
+ * unhandled rejection after the test has finished.
+ */
+async function seedArticle(): Promise<string> {
+  await useStore.getState().saveArticle({ ...ARTICLE }, PARAGRAPHS.map((p) => ({ ...p })));
   return ARTICLE.id;
 }
 
@@ -216,7 +226,7 @@ function neverSettlingAdapter(): import("../../src/lib/cloud/contract.js").Cloud
 
 // ── 1. The default: no adapter ────────────────────────────────────────────
 
-test("seam: base ships with no cloud adapter installed", () => {
+test("seam: base ships with no cloud adapter installed", async () => {
   assert.equal(cloud.cloudAdapter(), null);
   assert.equal(cloud.hasCloudAdapter(), false);
   assert.equal(bridge.isCloudEnabled(), false);
@@ -243,7 +253,7 @@ test("seam: with no adapter the session settles on anon and opens no socket", as
 });
 
 test("seam: every cloud entry point is a no-op that keeps its promise contract", async () => {
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
 
   assert.equal(await bridge.persistNote(noteId, articleId, { paragraphIndex: 1, type: "explain", selectionText: "x", question: "q", model: "m" }), null);
@@ -256,8 +266,8 @@ test("seam: every cloud entry point is a no-op that keeps its promise contract",
   assert.ok(useStore.getState().articles[articleId], "the article is untouched");
 });
 
-test("seam: an article import with no adapter stays purely local", () => {
-  const articleId = seedArticle();
+test("seam: an article import with no adapter stays purely local", async () => {
+  const articleId = await seedArticle();
   const article = useStore.getState().articles[articleId]!;
   bridge.enqueueArticleSync(article, { title: "t", blocks: [], textHash: "h" } as never, "local");
   assert.equal(useStore.getState().articles[articleId]?.remoteId, undefined);
@@ -267,7 +277,7 @@ test("seam: an article import with no adapter stays purely local", () => {
 // ── 2. A failing adapter never blocks the local path ──────────────────────
 
 test("seam: an adapter that throws cannot block or corrupt a local write", async () => {
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   cloud.registerCloudAdapter(hostileAdapter());
 
@@ -289,7 +299,7 @@ test("seam: an adapter that throws cannot block or corrupt a local write", async
 });
 
 test("seam: a throwing upload records a visible local failure without dropping the article", async () => {
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   cloud.registerCloudAdapter(hostileAdapter());
   useStore.getState().setOwner("user-A");
   session.useSession.setState({ status: "authed", user: { id: "user-A", email: "a@b.c", emailVerified: true } });
@@ -310,7 +320,7 @@ test("seam: a throwing upload records a visible local failure without dropping t
 test("seam: an upload is never attempted under an identity base cannot verify", async () => {
   const { adapter, calls } = recordingAdapter();
   cloud.registerCloudAdapter(adapter);
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const article = useStore.getState().articles[articleId]!;
 
   // No session is installed, so the frozen submit identity names an account
@@ -329,7 +339,7 @@ test("seam: an upload is never attempted under an identity base cannot verify", 
 test("seam: a rejected upload is recorded on the article and keeps it", async () => {
   const { adapter } = recordingAdapter();
   cloud.registerCloudAdapter(adapter);
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   // Make the local space and the session name the same account, so the
   // identity gate lets the upload through.
   useStore.getState().setOwner("user-A");
@@ -353,7 +363,7 @@ test("seam: an accepted upload binds the server id onto the local article", asyn
     uploadArticle: async () => ({ status: "uploaded", articleId: "server-1", versionId: "ver-1" }),
   });
   cloud.registerCloudAdapter(adapter);
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   useStore.getState().setOwner("user-A");
   session.useSession.setState({ status: "authed", user: { id: "user-A", email: "a@b.c", emailVerified: true } });
 
@@ -372,8 +382,8 @@ test("seam: an accepted upload binds the server id onto the local article", asyn
 
 // ── 3. Owner and epoch compatibility ──────────────────────────────────────
 
-test("seam: an anonymous probe keeps the anonymous cache", () => {
-  const articleId = seedArticle();
+test("seam: an anonymous probe keeps the anonymous cache", async () => {
+  const articleId = await seedArticle();
   useSettings.setState({ apiKey: "sk-user-key" });
 
   const decision = ownership.applyOwnership(null);
@@ -382,8 +392,8 @@ test("seam: an anonymous probe keeps the anonymous cache", () => {
   assert.equal(useSettings.getState().apiKey, "sk-user-key", "a reload must not erase a BYOK key");
 });
 
-test("seam: the first sign-in adopts the cache, a different account clears it", () => {
-  const articleId = seedArticle();
+test("seam: the first sign-in adopts the cache, a different account clears it", async () => {
+  const articleId = await seedArticle();
   useSettings.setState({ apiKey: "sk-anon-key" });
 
   assert.equal(ownership.applyOwnership("user-A"), "adopt");
@@ -405,7 +415,7 @@ test("seam: the first sign-in adopts the cache, a different account clears it", 
   assert.equal(useStore.getState().ownerUserId, "anonymous");
 });
 
-test("seam: every ownership resolution advances the epoch", () => {
+test("seam: every ownership resolution advances the epoch", async () => {
   const before = epoch.currentSessionEpoch();
   ownership.applyOwnership(null);
   const afterKeep = epoch.currentSessionEpoch();
@@ -415,7 +425,7 @@ test("seam: every ownership resolution advances the epoch", () => {
   assert.ok(epoch.currentSessionEpoch() > afterKeep);
 });
 
-test("seam: the adapter is told about the resolved owner, after the local stamps", () => {
+test("seam: the adapter is told about the resolved owner, after the local stamps", async () => {
   const seen: (string | null)[] = [];
   const { adapter } = recordingAdapter({
     onOwnerResolved: (owner) => {
@@ -437,7 +447,7 @@ test("seam: the adapter is told about the resolved owner, after the local stamps
 test("seam: a note anchor crosses the seam unchanged", async () => {
   const { adapter, anchors } = recordingAdapter();
   cloud.registerCloudAdapter(adapter);
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   useStore.getState().setOwner("user-A");
   session.useSession.setState({ status: "authed", user: { id: "user-A", email: "a@b.c", emailVerified: true } });
@@ -464,7 +474,7 @@ test("seam: a note anchor crosses the seam unchanged", async () => {
 test("seam: base binds the note's server id onto the local note", async () => {
   const { adapter } = recordingAdapter();
   cloud.registerCloudAdapter(adapter);
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   useStore.getState().setOwner("user-A");
   session.useSession.setState({ status: "authed", user: { id: "user-A", email: "a@b.c", emailVerified: true } });
@@ -505,7 +515,7 @@ test("seam: a note create that lands after the epoch moved is not bound", async 
     },
   });
   cloud.registerCloudAdapter(adapter);
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   useStore.getState().setOwner("user-A");
   session.useSession.setState({ status: "authed", user: { id: "user-A", email: "a@b.c", emailVerified: true } });
@@ -529,8 +539,8 @@ test("seam: a note create that lands after the epoch moved is not bound", async 
   );
 });
 
-test("seam: the interruption sweep records the frozen turn's own partial text", () => {
-  const articleId = seedArticle();
+test("seam: the interruption sweep records the frozen turn's own partial text", async () => {
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   const turnId = lifecycle.mintTurnId();
 
@@ -554,7 +564,7 @@ test("seam: the interruption sweep records the frozen turn's own partial text", 
 test("seam: the sweep offers the same frozen turn id to the adapter", async () => {
   const { adapter, turnIds } = recordingAdapter();
   cloud.registerCloudAdapter(adapter);
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   useStore.getState().setOwner("user-A");
   session.useSession.setState({ status: "authed", user: { id: "user-A", email: "a@b.c", emailVerified: true } });
@@ -579,7 +589,7 @@ test("seam: registering null restores the shipped default", async () => {
 
   cloud.registerCloudAdapter(null);
   assert.equal(cloud.hasCloudAdapter(), false);
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   assert.equal(await bridge.persistNote(noteId, articleId, { paragraphIndex: 1, type: "explain", selectionText: "x", question: "q", model: "m" }), null);
   assert.deepEqual(calls, ["probeSession"], "no call reaches an uninstalled adapter");
@@ -594,7 +604,7 @@ test("seam: registering null restores the shipped default", async () => {
 // one fails, rather than passing, against the previous implementation.
 
 test("seam: a synchronously throwing adapter cannot escape a local note write", async () => {
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   cloud.registerCloudAdapter(syncThrowingAdapter());
   useStore.getState().setOwner("user-A");
@@ -612,7 +622,7 @@ test("seam: a synchronously throwing adapter cannot escape a local note write", 
 });
 
 test("seam: a synchronously throwing adapter cannot escape a local delete", async () => {
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const noteId = seedNote(articleId);
   // Give the note a server binding so the remote half is actually attempted.
   useStore.getState().setNoteRemote(noteId, "remote-1", "ver-1");
@@ -623,7 +633,7 @@ test("seam: a synchronously throwing adapter cannot escape a local delete", asyn
 });
 
 test("seam: a synchronously throwing upload does not escape the import path", async () => {
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   cloud.registerCloudAdapter(syncThrowingAdapter());
   useStore.getState().setOwner("user-A");
   session.useSession.setState({ status: "authed", user: { id: "user-A", email: "a@b.c", emailVerified: true } });
@@ -644,7 +654,7 @@ test("seam: a synchronously throwing upload does not escape the import path", as
 });
 
 test("seam: a synchronously throwing persistAnswer cannot abort the interruption sweep", async () => {
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   const first = seedNote(articleId);
   const second = seedNote(articleId);
   cloud.registerCloudAdapter(syncThrowingAdapter());
@@ -665,9 +675,9 @@ test("seam: a synchronously throwing persistAnswer cannot abort the interruption
   }
 });
 
-test("seam: a synchronously throwing owner hook cannot interrupt ownership", () => {
+test("seam: a synchronously throwing owner hook cannot interrupt ownership", async () => {
   cloud.registerCloudAdapter(syncThrowingAdapter());
-  const articleId = seedArticle();
+  const articleId = await seedArticle();
   useSettings.setState({ apiKey: "sk-anon-key" });
 
   // The hook is called in every branch; the local reconciliation must complete
@@ -723,7 +733,7 @@ test("seam: a synchronously throwing probeSession still settles the session on a
 test("seam: signOut clears the local session even when the adapter throws synchronously", async () => {
   cloud.registerCloudAdapter(syncThrowingAdapter());
   useStore.getState().setOwner("user-A");
-  useStore.getState().saveArticle({ ...ARTICLE, paragraphs: [...ARTICLE.paragraphs] });
+  await useStore.getState().saveArticle({ ...ARTICLE }, PARAGRAPHS.map((p) => ({ ...p })));
   useSettings.setState({ apiKey: "sk-user-key" });
   session.useSession.setState({ status: "authed", user: { id: "user-A", email: "a@b.c", emailVerified: true } });
 

@@ -1,0 +1,688 @@
+/* SPDX-License-Identifier: MPL-2.0
+   This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+/*
+ * Chrome mock for the palette review.
+ *
+ * This file is deliberately *not* a second theme system. It reads the same
+ * custom properties `src/index.css` defines (`--bg`, `--surface`,
+ * `--surface2`, `--border`, `--outline`, `--text`, `--textDim`, `--accent`,
+ * `--highlight`, the four highlight hues and the three alpha scalars), so
+ * every colour on this page comes from the palette under review. The only
+ * thing added here is layout.
+ *
+ * All rules are unlayered, so they win against Tailwind's `@layer base` —
+ * which is also how the candidate palettes injected by `preview.js`
+ * override the shipped `[data-theme]` blocks.
+ */
+
+/* ── Review controls ─────────────────────────────────────────────── */
+
+.rv-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: rgb(var(--surface2));
+  border-bottom: 1px solid rgb(var(--border));
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  color: rgb(var(--textDim));
+}
+
+.rv-bar__group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rv-bar__group--grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rv-bar__label {
+  white-space: nowrap;
+}
+
+.rv-seg {
+  display: inline-flex;
+  border: 1px solid rgb(var(--outline));
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.rv-seg__btn {
+  padding: 0.3rem 0.7rem;
+  background: rgb(var(--surface));
+  color: rgb(var(--textDim));
+  border: 0;
+  border-right: 1px solid rgb(var(--outline));
+  font: inherit;
+  cursor: pointer;
+}
+
+.rv-seg__btn:last-child {
+  border-right: 0;
+}
+
+.rv-seg__btn:hover {
+  background: rgb(var(--surface2));
+  color: rgb(var(--text));
+}
+
+.rv-seg__btn.is-active {
+  background: rgb(var(--accent));
+  color: rgb(var(--bg));
+}
+
+.rv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem 0.25rem 0.3rem;
+  background: rgb(var(--surface));
+  border: 1px solid rgb(var(--border));
+  border-radius: 999px;
+  color: rgb(var(--textDim));
+  font: inherit;
+  cursor: pointer;
+}
+
+.rv-chip:hover {
+  border-color: rgb(var(--outline));
+  color: rgb(var(--text));
+}
+
+.rv-chip.is-active {
+  border-color: rgb(var(--accent));
+  color: rgb(var(--text));
+  box-shadow: inset 0 0 0 1px rgb(var(--accent));
+}
+
+.rv-chip__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(var(--outline) / 0.6);
+}
+
+.rv-chip__tag {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* ── App shell mock ──────────────────────────────────────────────── */
+
+.app {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: rgb(var(--text));
+  background: rgb(var(--bg));
+}
+
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 48px;
+  padding: 0 0.75rem;
+  background: rgb(var(--surface));
+  border-bottom: 1px solid rgb(var(--border));
+}
+
+.app-bar__left,
+.app-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-logo {
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.app-bar__crumb,
+.app-bar__meta {
+  font-size: 12px;
+  color: rgb(var(--textDim));
+}
+
+.app-bar__crumb::before {
+  content: "·";
+  margin-right: 0.5rem;
+  color: rgb(var(--border));
+}
+
+.app-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: rgb(var(--textDim));
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.app-icon:hover {
+  background: rgb(var(--surface2));
+  color: rgb(var(--text));
+}
+
+.app-icon:focus-visible {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 1px;
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr) 288px;
+  align-items: start;
+  gap: 0;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.app-toc {
+  position: sticky;
+  top: 49px;
+  align-self: start;
+  padding: 1.25rem 1rem;
+  font-size: 12px;
+  border-right: 1px solid rgb(var(--border));
+}
+
+.app-toc__title {
+  font-size: 12px;
+  color: rgb(var(--textDim));
+  margin-bottom: 0.6rem;
+}
+
+.app-toc__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-toc__list li {
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  color: rgb(var(--textDim));
+}
+
+.app-toc__list li.is-current {
+  background: rgb(var(--surface2));
+  color: rgb(var(--text));
+  box-shadow: inset 2px 0 0 rgb(var(--accent));
+}
+
+.app-main {
+  min-width: 0;
+  padding: 2rem 3rem 5rem;
+  border-right: 1px solid rgb(var(--border));
+}
+
+.app-rail {
+  position: sticky;
+  top: 49px;
+  align-self: start;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: calc(100vh - 49px);
+  overflow-y: auto;
+}
+
+.rail-empty {
+  font-size: 12px;
+  line-height: 1.7;
+  color: rgb(var(--textDim));
+}
+
+/* ── Article header ─────────────────────────────────────────────── */
+
+.article-head {
+  margin-bottom: 1.25rem;
+}
+
+.article-head__src {
+  display: inline-block;
+  font-size: 11px;
+  color: rgb(var(--textDim));
+  margin-bottom: 0.5rem;
+}
+
+.article-head__src::before {
+  content: "· ";
+  color: rgb(var(--border));
+}
+
+.article-head__title {
+  font-family: Charter, Georgia, "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
+  /* Mirrors `font-serif text-4xl md:text-5xl leading-[1.15] tracking-tight`
+     on the Reader's title block. */
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.75rem;
+  color: rgb(var(--text));
+}
+
+.article-head__meta {
+  font-size: 12px;
+  color: rgb(var(--textDim));
+}
+
+.brief-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.9rem 2.5rem 0.9rem 1rem;
+  margin-bottom: 2rem;
+  background: rgb(var(--surface));
+  border: 1px dashed rgb(var(--outline));
+  border-radius: 8px;
+  color: rgb(var(--text));
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.brief-card:hover {
+  background: rgb(var(--surface2));
+}
+
+.brief-card__title {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.brief-card__hint {
+  display: block;
+  font-size: 12px;
+  color: rgb(var(--textDim));
+}
+
+.brief-card__arrow {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgb(var(--textDim));
+}
+
+/* ── Note cards ─────────────────────────────────────────────────── */
+
+.note-card {
+  background: rgb(var(--surface));
+  border: 1px solid rgb(var(--border));
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.note-card__quote {
+  font-size: 11px;
+  line-height: 1.6;
+  color: rgb(var(--textDim));
+  border-left: 2px solid rgb(var(--accent));
+  padding-left: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.note-card__type {
+  display: inline-block;
+  font-size: 10px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  background: rgb(var(--accent) / 0.14);
+  color: rgb(var(--accent));
+  margin-bottom: 0.4rem;
+}
+
+.note-card__body {
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: rgb(var(--text));
+}
+
+.note-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgb(var(--border));
+  font-size: 11px;
+  color: rgb(var(--textDim));
+}
+
+.note-card__link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: rgb(var(--accent));
+  cursor: pointer;
+}
+
+/* ── Library ────────────────────────────────────────────────────── */
+
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.lib-card {
+  background: rgb(var(--surface));
+  border: 1px solid rgb(var(--border));
+  border-radius: 8px;
+  padding: 0.85rem;
+}
+
+.lib-card.is-selected {
+  border-color: rgb(var(--accent));
+  box-shadow: inset 0 0 0 1px rgb(var(--accent));
+}
+
+.lib-card__title {
+  font-size: 13.5px;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+
+.lib-card__excerpt {
+  font-size: 12px;
+  line-height: 1.7;
+  color: rgb(var(--textDim));
+  margin-bottom: 0.7rem;
+}
+
+.lib-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgb(var(--textDim));
+}
+
+.lib-chip {
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: rgb(var(--surface2));
+  border: 1px solid rgb(var(--border));
+}
+
+/* ── Controls ───────────────────────────────────────────────────── */
+
+.ctl-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.ctl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ctl__label {
+  font-size: 11px;
+  color: rgb(var(--textDim));
+}
+
+.ctl__input {
+  min-width: 220px;
+  padding: 0.4rem 0.55rem;
+  background: rgb(var(--surface2));
+  border: 1px solid rgb(var(--outline));
+  border-radius: 6px;
+  color: rgb(var(--text));
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.ctl__input:focus-visible {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 1px;
+}
+
+.ctl__primary {
+  padding: 0.4rem 0.9rem;
+  background: rgb(var(--text));
+  color: rgb(var(--bg));
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.ctl__ghost {
+  padding: 0.4rem 0.2rem;
+  background: none;
+  border: 0;
+  color: rgb(var(--textDim));
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ctl__ghost:hover {
+  color: rgb(var(--accent));
+}
+
+.ctl__focus {
+  padding: 0.4rem 0.9rem;
+  background: rgb(var(--surface));
+  border: 1px solid rgb(var(--outline));
+  border-radius: 6px;
+  color: rgb(var(--text));
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+/* Pinned open so the focus ring is visible without tabbing. */
+.ctl__focus:focus,
+.ctl__focus.is-forced {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 2px;
+}
+
+/* ── In-prose review annotations ────────────────────────────────── */
+
+.rv-note {
+  font-size: 12px !important;
+  line-height: 1.7 !important;
+  color: rgb(var(--textDim));
+  border-left: 2px solid rgb(var(--border));
+  padding-left: 0.75rem;
+}
+
+.rv-selection {
+  background: rgb(var(--hl-yellow) / var(--hl-mark-alpha));
+  border-radius: 2px;
+}
+
+.rv-pin {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--accent));
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
+/* ── Report sections ────────────────────────────────────────────── */
+
+.rv-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 2rem 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.rv-section:last-of-type {
+  padding-bottom: 4rem;
+}
+
+.rv-section__title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgb(var(--text));
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.9rem;
+  border-bottom: 1px solid rgb(var(--border));
+}
+
+.rv-section__hint {
+  font-size: 12px;
+  line-height: 1.8;
+  color: rgb(var(--textDim));
+  margin-bottom: 1rem;
+}
+
+.rv-section__hint code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  background: rgb(var(--highlight) / var(--code-alpha));
+  padding: 0.05em 0.3em;
+  border-radius: 3px;
+}
+
+.rv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.rv-table th,
+.rv-table td {
+  text-align: left;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid rgb(var(--border));
+}
+
+.rv-table th {
+  color: rgb(var(--textDim));
+  font-weight: 500;
+}
+
+.rv-table td.is-value {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.rv-table tr.is-fail td {
+  color: rgb(var(--accent));
+}
+
+.rv-ok {
+  color: rgb(var(--textDim));
+}
+
+.rv-fail {
+  color: rgb(var(--accent));
+  font-weight: 500;
+}
+
+.rv-tokens {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem 1rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 11.5px;
+}
+
+.rv-token {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rv-token__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgb(var(--outline) / 0.5);
+  flex: 0 0 auto;
+}
+
+.rv-token__name {
+  color: rgb(var(--textDim));
+  min-width: 96px;
+}
+
+.rv-notes {
+  font-size: 12px;
+  line-height: 1.85;
+  color: rgb(var(--textDim));
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.rv-notes li {
+  margin-bottom: 0.3rem;
+}
+
+/* ── Narrow screens ─────────────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .app-body {
+    grid-template-columns: 1fr;
+  }
+  .app-toc,
+  .app-rail {
+    position: static;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid rgb(var(--border));
+  }
+  .app-main {
+    padding: 1.5rem 1.25rem 3rem;
+    border-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-main {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+  .article-head__title {
+    font-size: 1.6rem;
+  }
+  .rv-section {
+    padding: 1.5rem 1rem 0;
+  }
+}

@@ -10,7 +10,7 @@
  * model, the real `streamText`, the real HTTP client. Only the far end is
  * fake. So this is a small HTTP server that speaks the SSE subset the SDK
  * consumes, binds `127.0.0.1:0` (a fresh dynamic port per instance, so the
- * browser suites' fixed ports are never touched), and records what the SDK
+ * phase-3 suites' fixed ports are never touched), and records what the SDK
  * actually sent — which is how "the key only travels to the selected
  * vendor" is proven rather than asserted from the client side.
  *

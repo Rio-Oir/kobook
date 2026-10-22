@@ -4,36 +4,41 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /**
- * Anonymous content extraction.
+ * Anonymous content extraction — phase 3 (cross-segment follow-up).
  *
- * Reading behaves identically whether or not someone is signed in; an account
- * only adds hosted saving and sync. So this route runs the same
- * `parseContent` layer, the same `importFromUrl` resolver and the same
- * `ParsedDocument` response as any other import, and is unauthenticated. It
- * is deliberately different in four ways:
+ * The product rule this route implements: "登录与不登录在阅读功能上保持
+ * 一致；登录只增加账号云端保存/同步能力" plus "匿名网页抓取仍通过受控
+ * 后端提取：返回统一正文，不写个人数据库。限制匿名请求频率、大小、超时
+ * 和并发；不得将私人云端 CRUD 改成公开".
  *
- *   - **It writes nothing.** No article, no document version, no paragraph
- *     and no user row. An anonymous reader who imports twenty articles leaves
- *     no rows at all, so there is no "ghost account" to clean up.
+ * Since 2026-10-15 (see `docs/双通道网页抓取方案.md`) the controlled
+ * backend is *direct HTTP + Readability only*: this route calls no
+ * Jina, and a configured `JINA_API_KEY` cannot change that. The
+ * browser is still the one that tries Jina first (`browser-jina`), and
+ * only a browser-side failure reaches this endpoint.
+ *
+ * So the route is deliberately shaped like the signed-in import —
+ * same `parseContent` layer, same `importFromUrl` resolver, same
+ * `ParsedDocument` response — with exactly these differences:
+ *
+ *   - **It writes nothing.** No `article`, no `article_version`, no
+ *     `paragraph`, and no `user` row. An anonymous reader who imports
+ *     twenty articles leaves no rows at all. That is what "不生成匿名
+ *     数据库用户" means concretely.
  *   - **It is metered.** The `config.rateLimit` declaration is enforced
  *     by `lib/rate-limit-store.ts` (both a fixed window and an in-flight
- *     ceiling), because this is the one unauthenticated route that can make
- *     the server open sockets.
- *   - **It never lets the client choose the proxy.** There is no outbound
- *     proxy to choose, and the body schema's `additionalProperties: false`
- *     means a request that tries to add one is a 400 rather than a silent
- *     override.
+ *     ceiling), so this is the one unauthenticated route that can make
+ *     the server open sockets without a rate cap.
+ *   - **It never lets the client choose the proxy.** There is no
+ *     outbound proxy to choose any more, and the body schema's
+ *     `additionalProperties: false` means a request that tries to add
+ *     one is a 400 rather than a silent override.
  *   - **It has its own hard deadline** on top of the resolver's own
  *     timeouts, so a request that somehow stalls in a layer the resolver
  *     does not cover still ends.
  *
- * The controlled backend is *direct HTTP + Readability only*: this route calls
- * no third-party reader service, and no environment value can change that. The
- * browser is still the one that tries its direct channel first
- * (`browser-jina`), and only a browser-side failure reaches this endpoint.
- *
- * No email-verification gate: there is no email to verify, and reading does
- * not require an account.
+ * No email-verification gate: an anonymous caller has no email to
+ * verify, and the rule is that reading does not require an account.
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -45,7 +50,11 @@ import {
   type ArticleImportKind,
 } from "../../../shared/contracts/index.js";
 import { parseContent, type ParseKind } from "../lib/parse/index.js";
-import { importFromUrl } from "../lib/url-import.js";
+import {
+  ContentUnavailableError,
+  UpstreamChallengeError,
+  importFromUrl,
+} from "../lib/url-import.js";
 import { SsrfBlockedError, SsrfTimeoutError } from "../lib/ssrf-guard.js";
 import {
   getRateLimitRelease,
@@ -58,8 +67,14 @@ const MAX_INPUT_BYTES = 2 * 1024 * 1024;
  * Whole-request deadline. Deliberately shorter than the sum of the
  * resolver's own per-hop budgets, so a pathological chain of slow hops
  * cannot keep the connection open for minutes.
+ *
+ * 12 s, down from 20 s. A reader who has been waiting 20 s has already given up
+ * on the page, and the browser client's own deadline now sits at 15 s so the
+ * server is still the one that answers — with a reason — rather than being
+ * cut off. Measured imports of ordinary articles finish in 0.6–0.9 s after the
+ * linkedom parse change, so this only shortens the pathological cases.
  */
-const ANONYMOUS_REQUEST_BUDGET_MS = 20_000;
+const ANONYMOUS_REQUEST_BUDGET_MS = 12_000;
 
 /**
  * The bucket the limiter uses. Named rather than derived from the route
@@ -68,10 +83,10 @@ const ANONYMOUS_REQUEST_BUDGET_MS = 20_000;
 export const ANONYMOUS_RATE_LIMIT_KEY = "anonymous-extract";
 
 /**
- * The routes this module declares a limit on. Exported so the service can
- * assert at boot that the limiter is actually wired to them — the whole point
- * being that a declaration nobody enforces is worse than no declaration,
- * because it reads as protection in review.
+ * The routes this module declares a limit on. Exported so `app.ts` can
+ * assert at boot that the limiter is actually wired to them — the whole
+ * point being that a declaration nobody enforces is worse than no
+ * declaration, because it reads as protection in review.
  */
 export const ANONYMOUS_RATE_LIMITED_ROUTES: RateLimitedRouteDeclaration[] = [
   { method: "POST", url: ROUTES.anonymousExtract },
@@ -164,12 +179,14 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
       try {
         if (req.body.kind === "url") {
           const result = await importFromUrl(req.body.content, {
-            // No outbound-service configuration is read or forwarded: a
-            // deployment value must not be able to open an egress this route
-            // is not meant to have. The body schema declares
+            // 2026-10-15: no Jina configuration is read or forwarded.
+            // The anonymous route used to pass `JINA_API_KEY` /
+            // `JINA_BASE_URL`; keeping that plumbing would suggest a
+            // deployment key could re-enable a Jina egress, which the
+            // current rule forbids. The body schema still declares
             // `additionalProperties: false` and the app disables AJV's
-            // `removeAdditional`, so a client that *tries* to name a proxy
-            // gets a 400 rather than a silent strip.
+            // `removeAdditional`, so a client that *tries* to name a
+            // proxy gets a 400 rather than a silent strip.
             signal: controller.signal,
           });
           return {
@@ -191,6 +208,18 @@ export function registerAnonymousRoutes(app: FastifyInstance): void {
         }
         return { document: parsed.document, extractor: "local" };
       } catch (err: unknown) {
+        if (err instanceof ContentUnavailableError) {
+          // The source says the page is gone. 422 (not 502) is what makes the
+          // browser stop instead of retrying through Jina, and the message is
+          // *our* sentence — `detectUnavailableContent` quotes the site's own
+          // phrase, so nothing of the upstream's own text reaches the client.
+          return fail(req, reply, 422, "EMPTY_ARTICLE", err.message);
+        }
+        if (err instanceof UpstreamChallengeError) {
+          // Login wall / JS shell / verification endpoint. Retryable, and the
+          // message is the reader's only clue about what to do next.
+          return fail(req, reply, 502, "UPSTREAM_FAILED", err.message);
+        }
         if (err instanceof SsrfBlockedError) {
           // "We refused this URL" — the message is the guard's own
           // user-readable Chinese text.

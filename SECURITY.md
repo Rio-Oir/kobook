@@ -2,135 +2,98 @@
 
 ## Reporting a vulnerability
 
-Please report suspected vulnerabilities **privately, by email**, to:
+Please report suspected vulnerabilities **privately**:
 
-**`a1458367843@gmail.com`** — <mailto:a1458367843@gmail.com>
+- Prefer [GitHub's private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
+  once it is enabled on the repository (Security → Advisories → "Report a
+  vulnerability"). Reports filed that way stay private until an advisory is
+  published.
+- If that channel is not available, email **`a1458367843@gmail.com`**
+  (<mailto:a1458367843@gmail.com>).
 
-This mailbox is the reporting channel for this project. Two honest caveats:
+Two honest caveats:
 
-* **Delivery has not been tested and no response time is promised.** No
-  acknowledgement schedule, triage window or fix deadline is stated here,
-  because none has been agreed. Treat a report as received only when you get a
-  reply.
-* The address is a contact for security reports about *this project*. Please do
-  not send credentials, personal data or third-party confidential material with
-  a report.
-
-The source is currently in a private GitHub repository, and reporting through
-GitHub is not available yet:
-
-* GitHub's *private vulnerability reporting* is a feature of **public**
-  repositories. For this repository the REST endpoint answers `404 Not Found`:
-  `GET /repos/Rio-Oir/kobook/private-vulnerability-reporting`. The same endpoint
-  returns `{"enabled": false}` for a public repository that has not switched the
-  feature on, and `{"enabled": true}` for one that has — so this is the feature
-  not applying to a private repository, not a permissions or token problem.
-* Issues are enabled on the repository, so an issue *can* be opened — but issues
-  are visible to everyone with access, which is the wrong place for exploit
-  details. Use the mailbox instead.
-
-**Once the repository is public**, turning on private vulnerability reporting
-would add a second, in-GitHub channel alongside the mailbox — Settings → Code
-security, or `PUT /repos/Rio-Oir/kobook/private-vulnerability-reporting` with
-`{"enabled": true}` (repository admin required). GitHub then shows a "Report a
-vulnerability" button under Security → Advisories, and reports through it stay
-private until an advisory is published. That is an option for later, not a
-channel that exists now, and enabling it is a repository-settings change that
-this project has not made.
+- **No response time is promised.** No acknowledgement schedule, triage window
+  or fix deadline is stated here, because none has been agreed. Treat a report
+  as received only when you get a reply.
+- Do not include credentials, personal data or third-party confidential
+  material. A reproduction with synthetic data is enough.
 
 ## What this application is trusted with
 
-Reading is local. The two things worth protecting are:
-
 1. **The reader's model API key (BYOK).** A bearer credential for a paid
    service, held in the browser.
-2. **The reader's articles, notes and highlights.** Private by default — they
-   are not uploaded anywhere, because there is nowhere in this tree to upload
-   them to.
+2. **The reader's articles, notes and highlights.** Private by default; stored
+   in the browser, and uploaded only when the reader signs in and chooses to
+   sync.
+3. **Account credentials and sessions, when the optional service is used.**
+   Password hashes, session cookies and the synced content belong to the
+   operator of the deployment.
 
-Everything below follows from those two.
+Everything below follows from those three.
 
 ## BYOK in full
 
 The single highest-impact issue in a reader like this is losing someone's model
-key. The design is laid out here completely, including the parts that are
-genuinely risky.
+key.
 
-* **Memory by default.** A key typed into the settings panel lives in the
+- **Memory by default.** A key typed into the settings panel lives in the
   in-memory store and disappears when the tab closes.
-* **Opt-in persistence, in plaintext.** Ticking "remember on this device" writes
-  the key to `localStorage` under `gloss-settings`, with a confirmation that
-  says so. Local storage is **not encrypted**. Anyone who can run script on
-  this origin — an injected script, a malicious extension, another person using
-  the same browser profile — can read it. Do not tick that box on a shared
-  machine, and prefer a key you can rotate.
-* **Bound to one origin.** The key is sent only to the origin the reader
+- **Opt-in persistence, in plaintext.** Ticking "remember on this device" writes
+  the key to `localStorage` under `gloss-settings`, with a confirmation that says
+  so. Local storage is **not encrypted**. Anyone who can run script on this
+  origin — an injected script, a malicious extension, another person using the
+  same browser profile — can read it. Do not tick that box on a shared machine,
+  and prefer a key you can rotate.
+- **Bound to one origin.** The key is sent only to the origin the reader
   explicitly confirmed: `confirmedOrigin` is recorded when a key is entered or
   kept, and the send path refuses any request whose endpoint origin differs.
   Changing the provider preset, editing the address field, or editing storage
   from devtools produces a refusal with an explicit message, not a silent send
   to a new destination.
-* **Never leaves through anything else.** It is not part of the backup format,
-  it is not in an export, and it is not in a log. The one request this
-  application builds that carries the key is the call to the model endpoint the
-  reader confirmed — that call *is* the feature, and its destination is pinned to
-  the confirmed origin.
-
-  The application builds exactly two other kinds of outbound request, and
-  neither involves the key:
-
-  * **The server-extraction request** (`POST /api/anonymous/extract`, used by
-    the fallback channel only) is built by `pickExtractFields` in
-    `src/lib/browser-extract-server.ts`, which names the fields it forwards —
-    `kind`, `content`, `title` — and *throws* on any other own property. A
-    settings object spread into that call fails loudly rather than leaking a
-    credential once and never being noticed.
-  * **The reader-service request** (browser → `r.jina.ai`, used first for most
-    hosts) is built in `src/lib/browser-extract-jina.ts`, which is a separate
-    module and does **not** go through `pickExtractFields`: it builds its URL
-    from the module's own constant plus the target, and sends fixed headers
-    (a content type and a return-format hint) with `credentials: "omit"`. No
-    settings value, and no credential, reaches it — the whitelist above guards
-    the server route, not this one, and the two are described separately here
-    for that reason.
-* **Redacted from errors.** `redactSecrets` in `src/lib/ai.ts` strips
+- **Never leaves through anything else.** It is not part of the backup format,
+  not part of an export, not part of the sync payload and not in a log. The one
+  request this application builds that carries the key is the call to the model
+  endpoint the reader confirmed — that call *is* the feature, and its destination
+  is pinned to the confirmed origin.
+- **Redacted from errors.** `redactSecrets` in `src/lib/ai.ts` strips
   `Bearer …` and `sk-…` shapes from any provider error before it is shown or
   kept, and the retained `Error` carries no `cause`, headers or request body.
-* **No build-time key, ever.** There is no `VITE_*_API_KEY` variable and none
+- **No build-time key, ever.** There is no `VITE_*_API_KEY` variable and none
   will be added. A key baked into a bundle is a key shared with every visitor.
 
 ## What the browser talks to, and when
 
-Load the **deployable** build and it makes **no** request off-origin: no
-analytics, no session probe, and no fonts, because that build strips the Google
-Fonts `<link>`s and the shipping font stack resolves to locally installed
-families and system fallbacks. (`npm run dev` and the plain `npm run build`
-entry point do load Google Fonts — see the two-builds note in `README.md`.)
-This is asserted in `apps/reader-release/tests/base-browser.mjs` by observing
-the wire.
+The deployable build (`apps/reader-release`) loads no third-party resource: no
+analytics, no remote fonts. The only request made on load is a **same-origin**
+session probe that decides whether to show the account entry. `npm run dev` and
+the plain `npm run build` entry point differ only in this respect (Vite serves
+the app directly); they still contain no third-party tag.
 
 Requests happen only when the reader asks for them:
 
-* **Paste an ordinary URL** → the browser asks `r.jina.ai` — a third-party
+- **Paste an ordinary URL** → the browser asks `r.jina.ai` — a third-party
   reader service — **directly, before this project's server is involved**. The
   target URL and the reader's IP address are visible to that third party. The
   request carries no cookies (`credentials: "omit"`) and cannot be aimed at a
   different reader service, because the address is a module constant rather than
   a parameter: **a page cannot choose its own proxy.**
-* **Paste an `x.com` or `twitter.com` URL** → the browser does **not** contact
+- **Paste an `x.com` or `twitter.com` URL** → the browser does **not** contact
   the third-party service. Those hosts answer a plain fetch with a JavaScript
-  shell or a login wall, so the attempt would burn a round trip to learn
-  nothing; the request goes straight to `POST /api/anonymous/extract` instead.
-  The match is on the parsed hostname — those two hosts and their DNS
-  subdomains only, so `evilx.com` and `x.com.evil.test` are not caught. This is
-  a best-effort path, not an access grant: a post that needs JavaScript or a
-  session still fails, and the reader is asked to paste the text.
-* **The server fallback** → for any other host, only after the direct channel
+  shell or a login wall, so the attempt would burn a round trip to learn nothing;
+  the request goes straight to `POST /api/anonymous/extract` instead. The match
+  is on the parsed hostname — those two hosts and their DNS subdomains only, so
+  `evilx.com` and `x.com.evil.test` are not caught. This is a best-effort path,
+  not an access grant: a post that needs JavaScript or a session still fails, and
+  the reader is asked to paste the text.
+- **The server fallback** → for any other host, only after the direct channel
   fails, and never after a cancellation. The body is the target URL and, when
   supplied, a title — built field by field from a fixed whitelist, so nothing
   else can ride along.
-* **Ask or explain** → the browser calls the reader's own configured model
+- **Ask or explain** → the browser calls the reader's own configured model
   endpoint, with the reader's own key. Never through this project's server.
+- **Sign in, sync** → requests go to the deployment's own `/api`, with the
+  session cookie the server sets. Nothing leaves for a third party.
 
 ## The extraction service
 
@@ -162,89 +125,83 @@ request bodies at 3 MB and the extract route's `content` field at 2 MB.
 
 **Rate limiting.** `server/src/lib/rate-limit-store.ts` enforces two independent
 gates — a fixed window per client and an in-flight ceiling per client plus a
-process-wide ceiling — because a rate limit alone does not stop five slow
-fetches held open at once. Addresses come from the socket peer, not from a
-header, unless `TRUST_LOOPBACK_PROXY=1` is set for a reverse proxy that
-overwrites `X-Forwarded-For`. Counters are per-process.
+process-wide ceiling — because a rate limit alone does not stop five slow fetches
+held open at once. Addresses come from the socket peer, not from a header, unless
+`TRUST_LOOPBACK_PROXY=1` is set for a reverse proxy that overwrites
+`X-Forwarded-For`. Counters are per-process.
 
-**Strict bodies.** The route's schema declares
-`additionalProperties: false` and the service disables AJV's default
-`removeAdditional` behaviour, so a request that tries to name a proxy gets a
-400 rather than a silent strip. `tests/unit/route-body-strictness.test.ts` pins
-this, because the default would have made the schema advisory.
+**Strict bodies.** The route's schema declares `additionalProperties: false` and
+the service disables AJV's default `removeAdditional` behaviour, so a request
+that tries to name a proxy gets a 400 rather than a silent strip.
+`tests/unit/route-body-strictness.test.ts` pins this, because the default would
+have made the schema advisory.
 
 **Error disclosure.** 5xx responses are replaced with a fixed message and the
-detail is logged against the same request id the caller is given. Upstream
-error text is never echoed verbatim, since it can carry a resolved IP, a port or
-a driver message.
+detail is logged against the same request id the caller is given. Upstream error
+text is never echoed verbatim, since it can carry a resolved IP, a port or a
+driver message.
 
-**Nothing is written.** The route creates no article, no version, no paragraph
-and no user row. There is no database in this process at all — the boundary
-tests boot it with every credential-shaped environment variable removed, and
-assert that an account, admin or cloud route answers 404.
+**Nothing is written by this route.** It creates no article, no version, no
+paragraph and no user row. The process also serves accounts, so the boundary is
+tested per route rather than per process: the inject suite asserts that the
+extract route writes nothing and that account, admin and cloud routes refuse an
+anonymous caller.
 
 ## The browser surface
 
-* **No `innerHTML`, no `dangerouslySetInnerHTML`, no `eval`, no `new Function`**
+- **No `innerHTML`, no `dangerouslySetInnerHTML`, no `eval`, no `new Function`**
   anywhere in `src/`, `server/`, `shared/` or `apps/`. Article content is
   rendered as React elements, and link targets are allowlisted to
   `http`/`https`/`mailto` with relative targets dropped.
-* **CSP.** The shippable build applies `script-src 'self'` with exactly one
-  hashed inline script (the theme bootstrap) and no `unsafe-inline` for
-  scripts; `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`,
+- **CSP.** The shippable build applies `script-src 'self'` with exactly one
+  hashed inline script (the theme bootstrap) and no `unsafe-inline` for scripts;
+  `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`,
   `form-action 'self'`. `connect-src` is deliberately wide (`https:`) because a
   BYOK endpoint cannot be enumerated — that is the one place the policy trades
   tightness for the feature working on a self-hosted endpoint. The build
-  *asserts* the policy is applied and that only the reviewed bootstrap is
-  hashed, so a change to the inline script fails the build rather than silently
-  widening the policy.
-* **No accounts means no session surface.** No cookie is set, no auth route is
-  mounted, and any account-shaped deep link lands on Home.
-* **Backups exclude credentials.** The backup schema names its fields
-  explicitly; provider, model, endpoint and key are not among them, and a
-  restore validates strictly and refuses any collision instead of overwriting.
+  *asserts* the policy is applied and that only the reviewed bootstrap is hashed.
+- **Accounts are optional.** Anonymous use sets no cookie and needs no database.
+  Signing in sets the session cookie issued by the deployment (HttpOnly); the
+  read path never blocks on a session check.
+- **Backups exclude credentials.** The backup schema names its fields
+  explicitly; provider, model, endpoint and key are not among them, and a restore
+  validates strictly and refuses any collision instead of overwriting.
 
 ## Known dependency advisories
 
-As of 2026-10-16, `npm audit --omit=dev` reports **0** known vulnerabilities in the production dependency set. The findings below are in the development build toolchain; a zero audit count is not a proof of absence of vulnerabilities.
+As of **2026-10-22**, against the official registry:
 
-`npm audit` over the full tree reports **7**. Those are **two advisories** —
-npm counts one entry for each package it flags, and five of the seven are
-propagation entries for packages that merely depend on an affected one. They are
-real, so they are recorded here rather than left for a reader to discover. All
-of them are in the **development build toolchain**, reached through
-`tailwindcss@3.4.19`, and none can be fixed without a breaking change:
+- `npm audit --omit=dev` reports **4 high** findings, all in the Prisma toolchain
+  (`prisma@7.10.0` → `@prisma/config` → `deepmerge-ts`, and `prisma` → `mysql2`).
+  There is no non-breaking fix at the pinned version; the remediation is a major
+  upgrade of Prisma.
+- `npm audit` over the full tree reports **12** (9 high, 3 moderate). The extra
+  entries are the Tailwind 3 build toolchain (`tailwindcss` → `micromatch` →
+  `braces`, and `postcss-selector-parser`), again without a non-breaking fix.
+- The Prisma and Tailwind packages involved are build- or CLI-time here. The
+  application does not mount `mysql2`; the advisory is recorded because it is in
+  the dependency graph, not because it is reachable at runtime.
 
-| Advisory | Severity | Affects | Patched release |
-| --- | --- | --- | --- |
-| [`GHSA-vfj7-8cjw-p6xm`](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) — `braces`, stack-exhaustion denial of service on deeply nested patterns | high | `braces@3.0.3` directly, and then `micromatch`, `chokidar`, `fast-glob` and `tailwindcss` as propagation entries | **None exists.** The advisory records no patched version, and `3.0.3` is the newest published release of `braces`: every published version is inside the vulnerable range. Upgrading within 3.x does not fix it, because there is nothing newer to upgrade to. |
-| [`GHSA-rj75-hqrm-r3gf`](https://github.com/advisories/GHSA-rj75-hqrm-r3gf) — `postcss-selector-parser`, quadratic-complexity CPU exhaustion | moderate | `postcss-selector-parser@6.1.4` directly, and then `postcss-nested` and `tailwindcss` (the Tailwind propagation entry is shared with the other chain) | `7.1.6`. `tailwindcss@3` and `postcss-nested@6` both require `^6.1.x`, so reaching it means a major bump of those first. |
-
-`npm audit fix` without `--force` proposes no change — there is no
-non-breaking upgrade that resolves any of them. `--force` offers
-`tailwindcss@4.3.3`, a major upgrade of the whole CSS toolchain; that is a
-migration decision with its own regression surface, not a security patch, and it
-has deliberately not been applied here. It is the remediation to evaluate.
-
-Both advisories are denial-of-service issues triggered by hostile *input* to a
-parser. Both parsers here are fed this project's own CSS and JavaScript during a
-local build — not attacker-controlled selectors on a request path — which lowers
-the practical exposure without removing it. Anyone running `npm ci` and a build
-in a context where those inputs are untrusted should treat these as live.
+A zero audit count is not proof of absence of vulnerabilities, and these numbers
+are a snapshot; run `npm audit --registry=https://registry.npmjs.org` yourself.
 
 ## Known limitations
 
-* **Rate-limit state is per process.** Multiple replicas each get their own
+- **Rate-limit state is per process.** Multiple replicas each get their own
   budget.
-* **No external network is exercised by any test.** The service suites use an
+- **No external network is exercised by the tests.** The service suites use an
   in-process fake with a locally generated CA, so a real DNS, TLS or
   upstream-behaviour change would not be caught here.
-* **The offline shell caches same-origin GETs under the deployed path** and
-  never `/api/`. A shared browser profile still shares this origin's storage,
-  which is the same trust boundary as any local-first web app.
-* **BYOK on a shared device is the residual risk.** Everything else in this
+- **The offline shell caches same-origin GETs under the deployed path** and never
+  `/api/`. A shared browser profile still shares this origin's storage, which is
+  the same trust boundary as any local-first web app.
+- **BYOK on a shared device is the residual risk.** Everything else in this
   document is a mitigation; "remember this key" is a deliberate trade the reader
-  makes, and it is the thing to check first on a machine you do not own.
-* **This code has not been through an independent security review.** The
+  makes.
+- **Deployment configuration is the operator's responsibility.** SMTP/SMS
+  transports, secrets, the database and the reverse proxy are configured by
+  whoever runs the instance; this repository only refuses to start a production
+  service with a missing or unsafe transport.
+- **This code has not been through an independent security review.** The
   guarantees above are properties of the implementation and are covered by
   tests, not by a third-party assessment.

@@ -15,7 +15,7 @@
 // The Vercel AI SDK passes the messages array through, so this pattern works
 // for all three.
 
-import type { Article } from "./types";
+import type { Article, Paragraph } from "./types";
 
 const MAX_DOCUMENT_CHARS = 120_000;
 const MAX_SELECTION_CHARS = 8_000;
@@ -25,17 +25,26 @@ function limit(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max)}\n[内容已截断]`;
 }
 
-export function buildStableContext(article: Article): string {
-  const paragraphs = article.paragraphs.map((p) => `[¶${p.index}] ${p.text}`).join("\n\n");
+/**
+ * The stable system context for every model call on this article.
+ *
+ * `paragraphs` is passed in rather than read off `article` because the text is
+ * no longer part of the record — see `types.ts`. The caller is the reader, and
+ * it has already established that the body is present: a model call about an
+ * article whose text is not on this device is not a case worth designing for,
+ * and pretending otherwise would mean building a prompt out of nothing.
+ */
+export function buildStableContext(article: Article, paragraphs: readonly Paragraph[]): string {
+  const document = paragraphs.map((p) => `[¶${p.index}] ${p.text}`).join("\n\n");
   return `<metadata>
 Title: ${article.title}
 Author: ${article.author || "Unknown"}
 Source: ${article.url ? safeHostname(article.url) : "pasted text"}
-Paragraphs: ${article.paragraphs.length}
+Paragraphs: ${paragraphs.length}
 </metadata>
 
 <document>
-${limit(paragraphs, MAX_DOCUMENT_CHARS)}
+${limit(document, MAX_DOCUMENT_CHARS)}
 </document>
 
 INSTRUCTIONS:
@@ -87,9 +96,9 @@ export function buildFollowUpQuestion(
  */
 export function findInvalidParagraphRef(
   text: string,
-  article: Article,
+  paragraphs: readonly Paragraph[],
 ): string | null {
-  const allowed = new Set(article.paragraphs.map((p) => p.index));
+  const allowed = new Set(paragraphs.map((p) => p.index));
   for (const match of text.matchAll(/¶(\d+)(?:-(\d+))?/g)) {
     const start = Number(match[1]);
     const end = Number(match[2] ?? match[1]);
@@ -100,8 +109,8 @@ export function findInvalidParagraphRef(
   return null;
 }
 
-export function validateParagraphRefs(text: string, article: Article): boolean {
-  return findInvalidParagraphRef(text, article) === null;
+export function validateParagraphRefs(text: string, paragraphs: readonly Paragraph[]): boolean {
+  return findInvalidParagraphRef(text, paragraphs) === null;
 }
 
 export function buildBriefQuestion(): string {
@@ -115,17 +124,17 @@ export function buildBriefQuestion(): string {
 // The document goes through the same `MAX_DOCUMENT_CHARS` clamp as the
 // explain/ask context: a long article must not turn a brief request into an
 // unbounded (and silently failing) prompt.
-export function buildBriefSystemContext(article: Article): string {
-  const paragraphs = article.paragraphs.map((p) => `[¶${p.index}] ${p.text}`).join("\n\n");
+export function buildBriefSystemContext(article: Article, paragraphs: readonly Paragraph[]): string {
+  const document = paragraphs.map((p) => `[¶${p.index}] ${p.text}`).join("\n\n");
   return `<metadata>
 Title: ${article.title}
 Author: ${article.author || "Unknown"}
 Source: ${article.url ? safeHostname(article.url) : "pasted text"}
-Paragraphs: ${article.paragraphs.length}
+Paragraphs: ${paragraphs.length}
 </metadata>
 
 <document>
-${limit(paragraphs, MAX_DOCUMENT_CHARS)}
+${limit(document, MAX_DOCUMENT_CHARS)}
 </document>
 
 INSTRUCTIONS:

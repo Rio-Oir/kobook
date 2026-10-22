@@ -4,24 +4,20 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /**
- * Theme toggle.
+ * Mode toggle.
  *
- * Single-axis design: the four fixed themes (light / dark / sepia /
- * paper) cycle in order, and the icon mirrors the current pick.
- * `system` is reachable from the settings panel only — it is not
- * a visual state the user wants to "see" in the top bar; it would
- * just look like one of the binary pair depending on the OS.
+ * One click flips day ↔ night. It never walks a list and never lands on
+ * `system` — the old control cycled through four palettes, which meant you
+ * could not tell what a click would do without remembering where you were.
  *
- * Lucide-style SVGs (1.5 stroke, rounded caps, 16×16) for the
- * binary pair; the warm palettes get a small filled swatch as
- * their indicator so the two are visually distinct from the
- * light/dark pair.
+ * The icon shows the mode you are *in* (sun for day, moon for night) and
+ * the label says what the click will *do*, which is what a tooltip is for.
  *
- * Shared across Home, Reader and Library so the
- * control is the same everywhere.
+ * Lucide-style SVGs (1.5 stroke, rounded caps, 16×16), shared across Home,
+ * Reader and Library so the control is the same everywhere.
  */
 
-import { useTheme } from "@/lib/theme";
+import { useTheme, resolveTheme, THEME_LABEL } from "@/lib/theme";
 
 function SunIcon() {
   return (
@@ -67,92 +63,22 @@ function MoonIcon() {
   );
 }
 
-// A simple page with a warm fill; visually distinct from the
-// binary sun/moon pair so a glance at the top bar is enough to
-// know the user is in a warm palette.
-function SepiaSwatch() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <rect x="5" y="3" width="14" height="18" rx="2" fillOpacity="0.18" />
-      <rect x="7" y="6" width="10" height="1.6" rx="0.8" />
-      <rect x="7" y="9.5" width="10" height="1.6" rx="0.8" />
-      <rect x="7" y="13" width="7" height="1.6" rx="0.8" />
-    </svg>
-  );
-}
-
-function PaperSwatch() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <rect x="5" y="3" width="14" height="18" rx="2" fillOpacity="0.18" />
-      <rect x="7" y="6" width="10" height="1.6" rx="0.8" />
-      <rect x="7" y="9.5" width="10" height="1.6" rx="0.8" />
-      <rect x="7" y="13" width="7" height="1.6" rx="0.8" />
-      <rect x="7" y="16" width="9" height="1.6" rx="0.8" />
-    </svg>
-  );
-}
-
-function iconFor(theme: string) {
-  switch (theme) {
-    case "light":
-      return SunIcon;
-    case "dark":
-      return MoonIcon;
-    case "sepia":
-      return SepiaSwatch;
-    case "paper":
-      return PaperSwatch;
-    default:
-      return MoonIcon;
-  }
-}
-
-function labelFor(theme: string) {
-  switch (theme) {
-    case "light":
-      return "浅色";
-    case "dark":
-      return "深色";
-    case "sepia":
-      return "护眼";
-    case "paper":
-      return "米色";
-    case "system":
-      return "跟随系统";
-    default:
-      return "深色";
-  }
-}
-
 export default function ThemeToggle() {
   const theme = useTheme((s) => s.theme);
-  const cycle = useTheme((s) => s.cycleTheme);
+  const toggle = useTheme((s) => s.toggleTheme);
 
-  // `system` is reachable only from the settings panel; the cycle
-  // starts the user on a fixed palette. If the stored value is
-  // `system` (e.g. just upgraded) the toggle still shows the
-  // resolved icon.
-  const Icon = iconFor(theme === "system" ? "dark" : theme);
-  const title = `主题：${labelFor(theme)}（点击切换）`;
+  // While following the system the icon shows whichever mode the OS asked
+  // for, so the button never looks like it disagrees with the page.
+  const resolved = resolveTheme(theme);
+  const Icon = resolved === "day" ? SunIcon : MoonIcon;
+  const next = resolved === "day" ? "night" : "day";
+  const label = `切换到${THEME_LABEL[next]}模式`;
 
   return (
     <button
-      onClick={cycle}
-      title={title}
-      aria-label="切换主题"
+      onClick={toggle}
+      title={label}
+      aria-label={label}
       className="text-gloss-textDim hover:text-gloss-text p-1.5 rounded transition-colors"
     >
       <Icon />

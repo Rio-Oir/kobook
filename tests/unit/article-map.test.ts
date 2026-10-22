@@ -26,6 +26,29 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { anonymousDocumentToLocalArticle, localArticleKeyFor } from "../../src/lib/articles.js";
 import type { ParsedDocument } from "../../shared/contracts/index.js";
+import type { Article, Paragraph } from "../../src/lib/types.js";
+
+/**
+ * The mapper's two outputs, put back together for the assertions below.
+ *
+ * `anonymousDocumentToLocalArticle` returns the record and the text
+ * separately now — they are stored separately — but almost everything these
+ * gates assert is about the mapping between a block and a paragraph, so they
+ * read better with the two joined. `bodyStats` is filled in the way the store
+ * fills it, so the result is a real `Article` and can be handed to
+ * `localArticleKeyFor`.
+ */
+function mapDocument(doc: ParsedDocument): Article & { paragraphs: Paragraph[] } {
+  const { article, paragraphs } = anonymousDocumentToLocalArticle(doc);
+  return {
+    ...article,
+    bodyStats: {
+      paragraphs: paragraphs.length,
+      chars: paragraphs.reduce((total, p) => total + p.text.length, 0),
+    },
+    paragraphs,
+  };
+}
 
 /** A document shaped like the Markdown extractor's output. */
 function documentWith(blocks: ParsedDocument["blocks"]): ParsedDocument {
@@ -40,7 +63,7 @@ function documentWith(blocks: ParsedDocument["blocks"]): ParsedDocument {
 }
 
 test("heading depth survives the mapping", () => {
-  const local = anonymousDocumentToLocalArticle(
+  const local = mapDocument(
     documentWith([
       {
         id: "b1-aaaaaaaa",
@@ -57,7 +80,7 @@ test("heading depth survives the mapping", () => {
 });
 
 test("code fence language and list kind survive the mapping", () => {
-  const local = anonymousDocumentToLocalArticle(
+  const local = mapDocument(
     documentWith([
       {
         id: "b1-bbbbbbbb",
@@ -86,7 +109,7 @@ test("inline emphasis survives the mapping", () => {
   // this time: an emitter that drops `spans` would leave every article's bold
   // and links on the server and render plain text, with nothing failing — the
   // spans are optional, so the type checker stays quiet.
-  const local = anonymousDocumentToLocalArticle(
+  const local = mapDocument(
     documentWith([
       {
         id: "b1-11111111",
@@ -112,7 +135,7 @@ test("absent optional fields stay absent rather than becoming nulls", () => {
   // not invent them: `blockKindOf` reads a missing `type` as prose, and
   // `headingTag` defaults a missing level — inventing values here would
   // make a plain paragraph look like a heading.
-  const local = anonymousDocumentToLocalArticle(
+  const local = mapDocument(
     documentWith([
       {
         id: "b1-dddddddd",
@@ -136,7 +159,13 @@ test("absent optional fields stay absent rather than becoming nulls", () => {
 test("the anchor fields are untouched", () => {
   // `text`, `hash` and `blockId` are the note/highlight coordinate
   // system; carrying the new structural fields must not disturb them.
-  const local = anonymousDocumentToLocalArticle(
+  //
+  // `hash` is carried through **whole**. It used to be truncated to 12
+  // characters here, which made a paragraph unable to rebuild the
+  // `ContentBlock` the sync upload sends (the route re-derives the digest
+  // from `text` and refuses a mismatch) — and nothing read the shortened
+  // value anyway.
+  const local = mapDocument(
     documentWith([
       {
         id: "b7-eeeeeeee",
@@ -152,7 +181,7 @@ test("the anchor fields are untouched", () => {
   assert.equal(block.index, 7);
   assert.equal(block.text, "第七个块");
   assert.equal(block.blockId, "b7-eeeeeeee");
-  assert.equal(block.hash, "abcdef012345", "the client keeps its 12-char truncation");
+  assert.equal(block.hash, "abcdef0123456789".repeat(4), "the digest is stored whole, not truncated");
 });
 
 // ── Local article identity: same text, different formatting ─────────────
@@ -193,22 +222,23 @@ const BOLD_BLOCK = { ...PLAIN_BLOCK, spans: [{ start: 0, end: 2, kinds: ["strong
 
 test("localArticleKeyFor: a re-paste of identical blocks keeps the base key", () => {
   const doc = docWith("h".repeat(64), [PLAIN_BLOCK]);
-  const first = anonymousDocumentToLocalArticle(doc);
-  first.syncDocument = doc;
+  const first = mapDocument(doc);
   assert.equal(localArticleKeyFor(doc, undefined), first.id);
   assert.equal(localArticleKeyFor(doc, first), first.id, "same blocks must reuse the row");
 });
 
 test("localArticleKeyFor: a row with no recorded document is not overwritten", () => {
-  // Rows written before `syncDocument` existed (or built by any path
-  // that did not store it) cannot be proven identical — the `paragraph`
-  // projection is not structurally equal to a `ContentBlock` (truncated
-  // hash, no `spans`). The rule takes the suffixed key rather than
-  // guessing, so a false negative costs one redundant row and a false
+  // Rows written before `blocksDigest` existed — or built by any path that had
+  // no blocks to digest — cannot be *proven* identical. The old version of
+  // this rule compared a `paragraph` projection against a `ContentBlock` and
+  // was therefore always unequal (truncated hash); the digest replaces that
+  // with an explicit "no proof available". The rule takes the suffixed key
+  // rather than guessing: a false negative costs one redundant row, a false
   // positive would cost someone else's notes.
   const doc = docWith("h".repeat(64), [PLAIN_BLOCK]);
-  const legacy = anonymousDocumentToLocalArticle(doc);
-  assert.equal(legacy.syncDocument, undefined);
+  const legacy = mapDocument(doc);
+  delete legacy.blocksDigest;
+  assert.equal(legacy.blocksDigest, undefined, "no recorded digest means no proof of equality");
   const key = localArticleKeyFor(doc, legacy);
   assert.notEqual(key, legacy.id, "cannot prove equal ⇒ do not reuse");
   assert.ok(key.startsWith(legacy.id));
@@ -222,8 +252,7 @@ test("localArticleKeyFor: a formatting-only change gets its own key, leaving the
   const bold = docWith(sharedHash, [BOLD_BLOCK]);
   assert.equal(plain.textHash, bold.textHash);
 
-  const existing = anonymousDocumentToLocalArticle(plain);
-  existing.syncDocument = plain;
+  const existing = mapDocument(plain);
   existing.remoteId = "remote-plain";
   existing.remoteVersionId = "version-plain";
 
@@ -251,7 +280,7 @@ test("localArticleKeyFor: a text change simply uses the new base key", () => {
     `local-${after.textHash.slice(0, 16)}`,
     "a distinct textHash needs no suffix — there is no collision to disambiguate",
   );
-  assert.notEqual(localArticleKeyFor(after, undefined), anonymousDocumentToLocalArticle(before).id);
+  assert.notEqual(localArticleKeyFor(after, undefined), mapDocument(before).id);
 });
 
 test("localArticleKeyFor: an unrelated row sitting at the base key is never overwritten", () => {
@@ -263,8 +292,7 @@ test("localArticleKeyFor: an unrelated row sitting at the base key is never over
     { ...PLAIN_BLOCK, id: "b1-cccccccc", text: "完全不同的正文。", hash: "cccccccccccccccc" },
   ]);
   const incoming = docWith("d".repeat(64), [PLAIN_BLOCK]);
-  const sitting = anonymousDocumentToLocalArticle(other);
-  sitting.syncDocument = other;
+  const sitting = mapDocument(other);
   const key = localArticleKeyFor(incoming, sitting);
   assert.notEqual(key, sitting.id);
   assert.ok(key.startsWith(`local-${incoming.textHash.slice(0, 16)}`));

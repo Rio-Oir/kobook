@@ -24,12 +24,20 @@ export function registerOfflineShell(): void {
   if (typeof window === "undefined" || !window.isSecureContext) return;
 
   const base = import.meta.env.BASE_URL || "/";
-
-  window.addEventListener("load", () => {
+  const register = () => {
     void navigator.serviceWorker
       .register(`${base}sw.js`, { scope: base })
       .catch(() => {
         /* No offline shell; the app still works online. */
       });
-  });
+  };
+
+  // Waiting for `load` keeps the worker's install from competing with the first
+  // paint — but the listener is only useful if `load` has not happened yet.
+  // `main.tsx` now awaits the storage bootstrap before calling this, and on a
+  // fast load that await outlasts the event: the listener is added to an event
+  // that already fired, registration never happens, and the app silently loses
+  // its offline shell with nothing in the console to say so.
+  if (document.readyState === "complete") register();
+  else window.addEventListener("load", register, { once: true });
 }

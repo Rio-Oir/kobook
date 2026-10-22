@@ -7,14 +7,14 @@
 // Uses its own system context (different focus than explain) but the same
 // stable-prefix pattern for cache reuse.
 //
-// The request is routed through `streamChat` rather than driving
+// Phase 4 routes the request through `streamChat` instead of driving
 // `streamText` here. A second, hand-rolled SDK call site meant a second,
 // worse lifecycle: no timeout, no cancellation, no `maxRetries: 0`, and —
 // because it iterated `textStream` — a provider error mid-stream looked
 // like an empty success. Going through `streamChat` means the brief inherits
 // the same error/cancel/timeout/cleanup rules as every other AI call.
 
-import type { Article } from "./types";
+import type { Article, Paragraph } from "./types";
 import { z } from "zod";
 import { streamChat } from "./ai";
 import { readSettings } from "./settings";
@@ -47,6 +47,7 @@ export type GenerateBriefOptions = {
 
 export async function generateBrief(
   article: Article,
+  paragraphs: readonly Paragraph[],
   onProgress?: (raw: string) => void,
   opts: GenerateBriefOptions = {},
 ): Promise<Brief> {
@@ -54,13 +55,13 @@ export async function generateBrief(
   if (!s.apiKey) {
     // No key ⇒ demo mode, and the mock is a local, obviously-labelled
     // excerpt. It is *not* routed through `streamChat`: a mock text stream
-    // is not JSON, and dressing a demo reply up as a real provider response
-    // is the failure this branch exists to avoid.
-    return mockBrief(article);
+    // is not JSON, and pretending a demo reply parsed into a brief is the
+    // "演示模式当真实供应商验收" mistake the rules call out.
+    return mockBrief(article, paragraphs);
   }
 
   const messages = [
-    { role: "system" as const, content: buildBriefSystemContext(article) },
+    { role: "system" as const, content: buildBriefSystemContext(article, paragraphs) },
     { role: "user" as const, content: buildBriefQuestion() },
   ];
 
@@ -77,7 +78,7 @@ export async function generateBrief(
       },
       onDone: () => {
         try {
-          resolve(parseBrief(raw, article));
+          resolve(parseBrief(raw, paragraphs));
         } catch (err) {
           reject(err instanceof Error ? err : new Error(String(err)));
         }
@@ -95,7 +96,7 @@ export async function generateBrief(
 }
 
 /** Parse + validate the model's reply. Exported for the unit tests. */
-export function parseBrief(raw: string, article: Article): Brief {
+export function parseBrief(raw: string, paragraphs: readonly Paragraph[]): Brief {
   // Strip code fences if the model added them
   const cleaned = raw
     .trim()
@@ -119,20 +120,20 @@ export function parseBrief(raw: string, article: Article): Brief {
   // article: a claim pointing at ¶13 of a 10-paragraph revision is worse
   // than no brief, because the reader would click through to nothing.
   for (const claim of parsed.data.claims) {
-    const reason = findInvalidParagraphRef(claim.paragraphRef, article);
+    const reason = findInvalidParagraphRef(claim.paragraphRef, paragraphs);
     if (reason) {
       throw new Error(`模型返回了无效的段落引用（${reason}）`);
     }
   }
-  const gistReason = findInvalidParagraphRef(parsed.data.gist, article);
+  const gistReason = findInvalidParagraphRef(parsed.data.gist, paragraphs);
   if (gistReason) {
     throw new Error(`模型返回了无效的段落引用（${gistReason}）`);
   }
   return parsed.data;
 }
 
-function mockBrief(article: Article): Brief {
-  const ps = article.paragraphs.slice(0, 5);
+function mockBrief(article: Article, paragraphs: readonly Paragraph[]): Brief {
+  const ps = paragraphs.slice(0, 5);
   return {
     gist:
       "[演示摘要：以下是原文节选，并非 AI 总结。请在设置中填写 API 密钥后生成真实摘要。]\n\n" +

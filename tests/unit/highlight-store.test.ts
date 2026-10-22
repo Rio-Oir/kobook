@@ -14,7 +14,7 @@
  *
  *  2. **a v2 blob written before highlights existed still loads**.
  *     The store version stays 2 rather than bumping to 3, because
- *     bumping would rewrite the frozen migration assertion in
+ *     bumping would rewrite the frozen phase-2 migration assertion in
  *     `storage-migration.test.ts`. That only works if zustand's
  *     default `merge` fills the missing `highlights` key from the
  *     initial state — which is exactly the kind of thing that is true
@@ -159,7 +159,7 @@ test("clearUserCache wipes highlights along with articles and notes", async () =
 });
 
 test("a v2 blob written before highlights existed still loads (merge fills the key)", async () => {
-  // Exactly the shape an existing install has on disk: no `highlights`.
+  // Exactly the shape a phase-2 install has on disk: no `highlights`.
   memory.set(
     "gloss-storage",
     JSON.stringify({

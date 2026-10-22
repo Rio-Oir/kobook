@@ -12,11 +12,11 @@
  * rule list must be exhaustive enough that a missing case fails a
  * test, not production.
  *
- * `resolvePublicAddress` is harder to test in isolation because it actually
- * calls DNS; the relevant coverage is in
- * `apps/reader-release/tests/server-inject.mjs`, which exercises the URL path
- * against an in-process fake upstream and therefore sees the same DNS path
- * the route handler sees.
+ * `resolvePublicAddress` is harder to test in isolation because it
+ * actually calls DNS; the relevant coverage lives in
+ * `tests/phase3.ts` (the integration test boots a real Postgres + a
+ * real server and exercises the URL path against an in-process fake
+ * Jina endpoint), where the DNS path is what the route handler sees.
  */
 
 import assert from "node:assert/strict";

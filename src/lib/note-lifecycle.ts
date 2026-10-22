@@ -6,11 +6,11 @@
 /**
  * Local note lifecycle.
  *
- * Everything here operates only on the local store. It used to be tangled
- * with the upload queue, which meant the reader's turn bookkeeping could not
- * be read (or tested) without a server client in the import graph. Splitting
- * it out is what lets the reader keep its exact behaviour with no cloud
- * adapter installed at all.
+ * Everything here operates only on the local store. It used to live in
+ * `cloud-notes.ts`, tangled with the upload queue, which meant the reader's
+ * turn bookkeeping could not be read (or tested) without a server client in
+ * the import graph. Splitting it out is what lets the reader keep its exact
+ * behaviour with no cloud adapter installed at all.
  *
  * The rules the reader depends on:
  *

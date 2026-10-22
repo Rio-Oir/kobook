@@ -6,12 +6,13 @@
 /**
  * Fixed-window limiter + concurrency gate for the unauthenticated routes.
  *
- * The anonymous extraction route is the first route an unauthenticated caller
- * can use, and for `kind: "url"` it is also the only unauthenticated egress
- * the service has: one POST makes the server resolve a hostname, open a
- * socket, and read up to `MAX_RESPONSE_BYTES`. Leaving that unmetered would
- * undo the point of having an SSRF guard, and a limiter that only guarded a
- * sign-in mount would not cover it.
+ * Why a second limiter at all, when Better Auth already ships one? Better
+ * Auth's limiter only guards its own mount (`/api/auth/*`). The anonymous
+ * extraction route is the first *non-auth* route an unauthenticated caller
+ * can use, and for `kind: "url"` it is also the first unauthenticated
+ * egress in the product: one POST makes the server resolve a hostname,
+ * open a socket, and read up to `MAX_RESPONSE_BYTES`. Leaving that
+ * unmetered would undo the point of having an SSRF guard.
  *
  * `config: { rateLimit: ... }` on a route is the declaration; this module
  * is the enforcement. Fastify stores a route's `config` on the route
@@ -30,9 +31,9 @@
  *     a minute that each take 15 s is still 5 concurrent upstream fetches
  *     from a single caller.
  *
- * State is per-process and in memory. That is honest for a single-process
- * deployment and is a known limitation: running more than one replica needs a
- * shared store, or each replica gets its own budget.
+ * State is per-process and in memory. That is honest for this deployment
+ * (one server process) and is recorded as a known limit in the phase-3
+ * report; a multi-replica deployment needs a shared store.
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -158,9 +159,8 @@ export function normalizeRouteRateLimit(
     throw new Error(`rateLimit config on ${fallbackKey} must be an object`);
   }
   const value = raw as Partial<RouteRateLimitConfig> & {
-    // The alternative spelling (`timeWindow`, either seconds or "1 minute")
-    // is accepted so a declaration written in that style keeps working rather
-    // than being silently ignored.
+    // The phase-2 style spelling is accepted so a declaration copied
+    // from the auth limiter keeps working rather than being ignored.
     timeWindow?: string | number;
   };
   const timeWindowSeconds =

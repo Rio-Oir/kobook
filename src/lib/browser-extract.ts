@@ -4,41 +4,45 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /**
- * The dual-channel front door: browser-direct Jina first, controlled backend
- * only if that fails.
+ * The URL front door: server-side HTML + Readability, with the browser-direct
+ * Jina channel available but **off unless asked for**.
  *
  * ```text
  * importFromUrlDual(url)
  *   ├─ normalize the URL  ──────────────── invalid → stop, no request at all
- *   ├─ channel 1: browser → r.jina.ai → parse Markdown locally
- *   │    └─ success → source "browser-jina", backend never contacted
+ *   ├─ channel 1: POST /api/anonymous/extract → guarded fetch + Readability
+ *   │    └─ success → source "server-readability", Jina never contacted
  *   └─ channel 1 failed
- *        ├─ cancelled or invalid → stop (no fallback)
- *        └─ channel 2: POST /api/anonymous/extract
- *             ├─ success → source "server-jina" / "server-readability"
- *             └─ failure → both reasons, "请手动粘贴文章正文后导入"
+ *        ├─ default: report the failure, and what to do about it
+ *        └─ `jinaFallback: true` only
+ *             ├─ cancelled, SSRF-blocked, rate-limited, or X/Twitter → stop
+ *             └─ channel 2: browser → r.jina.ai → parse Markdown locally
  * ```
  *
- * Four rules are enforced here rather than left to the caller to remember,
+ * **Why the second channel is opt-in (2026-10-22).** It was on by default and
+ * cost every failure 7–10 seconds before the user saw a message: on a page the
+ * server had already refused in 0.16s (an anti-bot 403), the browser then spent
+ * 6.8s on a `r.jina.ai` attempt that failed too and reported "抓取失败" at 8.65s
+ * after the click. It also sent the reader's URL to a third party from their
+ * own browser, which the server channel deliberately never does. The channel
+ * remains — it is the only thing that can reach a page whose HTML needs
+ * scripting — but enabling it is now a caller's decision, and the tests that
+ * exercise it pass the flag.
+ *
+ * Three rules are enforced here rather than left to the caller to remember,
  * because each one is a way the feature can be wrong *while appearing to work*:
  *
- *   1. **Success means zero backend requests.** There is no code path from a
- *      channel-1 success to `fetchViaServerFallback`.
+ *   1. **HTML extraction is primary.** A successful server parse returns
+ *      immediately and makes no Jina request.
  *   2. **Cancellation never falls back.** `failure.fallbackEligible` is false
- *      for `cancelled`; turning a "user navigated away" into a backend request
- *      would contradict the cancellation and, on a metered route, spend the
- *      deployment's quota on work nobody is waiting for.
- *   3. **A local parse failure is a channel failure.** Jina can return Markdown
- *      that remark produces nothing usable from; that is the direct channel
- *      having failed, so the server gets a turn (it runs the same parser and
- *      can also reach for Readability).
- *   4. **The sources are recorded.** `browser-jina` / `server-jina` /
- *      `server-readability` / `local` travel with the document, so the library
- *      can say where an article came from without a second round trip.
+ *      for `cancelled`; turning a "user navigated away" into another request
+ *      would contradict the cancellation.
+ *   3. **The sources are recorded.** `browser-jina` / `server-jina` /
+ *      `server-readability` / `local` travel with the document, which is what
+ *      the plan asks to be stored per article.
  *
  * Pasted text is the other half and it is deliberately *not* symmetric:
- * `importFromText` has no network path at all. A paste must read without
- * waiting for a backend, so a local parse failure here returns a validation
+ * `importFromText` has no network path at all, so a local parse failure here returns a validation
  * message to the user rather than quietly becoming a server request. That is
  * what makes the four acceptance cases (backend down, 404, 500, offline)
  * behave identically for a paste.
@@ -54,6 +58,7 @@ import {
 } from "./browser-extract-errors.js";
 import { fetchViaJinaDirect, normalizeArticleUrl } from "./browser-extract-jina.js";
 import { fetchViaServerFallback } from "./browser-extract-server.js";
+import { cleanJinaMarkdown } from "./clean-jina-markdown.js";
 import { parseLocalMarkdown } from "./local-import-parse.js";
 import {
   importFromPastedText,
@@ -64,6 +69,11 @@ import {
 export interface DualExtractOptions {
   /** Transport seam for tests; production callers omit it. */
   fetchImpl?: typeof fetch;
+  /**
+   * Whether the browser-direct Jina channel may run after the server channel
+   * failed. Default `false`; see the module header for why it is opt-in.
+   */
+  jinaFallback?: boolean;
   /** Overrides `JINA_DEADLINE_MS`. */
   jinaDeadlineMs?: number;
   /** Overrides `SERVER_FALLBACK_DEADLINE_MS`. */
@@ -73,9 +83,9 @@ export interface DualExtractOptions {
   /** Cancels the whole import, both channels included. */
   signal?: AbortSignal;
   /**
-   * Called just before the fallback request goes out.
+   * Called just before a secondary extraction request goes out.
    *
-   * This is how the UI shows "正在尝试服务器备用抓取" *while* the wait is
+   * This is how the UI shows the active extraction route *while* the wait is
    * happening — the failure messages carry the same wording for the
    * after-the-fact case, but a progress indication cannot wait for the result.
    */
@@ -83,9 +93,9 @@ export interface DualExtractOptions {
 }
 
 export interface FallbackNotice {
-  /** Why channel 1 failed. */
+  /** Why the primary extraction failed. */
   reason: ExtractFailureKind | "site-policy";
-  /** The same sentence the user will see if the fallback also fails. */
+  /** Progress message for the secondary extraction. */
   message: string;
 }
 
@@ -93,15 +103,15 @@ export interface UrlImportSuccess {
   ok: true;
   source: ExtractSource;
   document: ParsedDocument;
-  /** Present when the backend saved the day, describing why it was needed. */
+  /** Present when the secondary extraction succeeded, describing why it was needed. */
   fallback?: FallbackNotice;
 }
 
 export interface UrlImportFailure {
   ok: false;
-  /** What went wrong on channel 1. */
+  /** What went wrong on the primary extraction path. */
   failure: ExtractFailure;
-  /** What went wrong on channel 2; absent when the fallback was not allowed. */
+  /** What went wrong on the secondary extraction path. */
   fallbackFailure?: ExtractFailure;
 }
 
@@ -146,19 +156,29 @@ function sourceForServerExtractor(
  * Run Markdown from Jina through the local parser, then let Jina's metadata
  * win where it has something to say.
  *
- * The override order is `title: data.title` into the parse, then the
- * envelope's title/author taking precedence over what remark derived. Both
- * the server and the browser run the same parser over the same block
- * vocabulary, so the same article fetched through either channel produces the
- * same `ParsedDocument` — which is what lets a note anchored by one validate
- * against the other.
+ * Mirrors `jinaFetch` in `server/src/lib/url-import.ts` — same parser, same
+ * override order (`title: data.title` into the parse, then the envelope's
+ * title/author taking precedence over what remark derived).
+ *
+ * The one deliberate difference is the `cleanJinaMarkdown` pass in front of
+ * the parser: Jina's reader returns the page's own navigation and legal
+ * footer along with the article, and on the browser channel we can trim
+ * those two boundaries using the page title Jina already reported, and
+ * merge adjacent strong-tag delimiters that otherwise leak into text. It runs
+ * here and nowhere else — not on the server channel, not on pasted text or
+ * files, and not on an article that is already stored — so the two channels
+ * can now disagree about a page whose Markdown carried site chrome. The
+ * cleanup is a no-op when neither artifact is present. It affects only new
+ * imports: existing documents and their stored anchor offsets stay intact.
  */
 function documentFromJinaMarkdown(
   markdown: string,
   envelope: { title?: string; author?: string },
+  sourceUrl?: string,
 ): { ok: true; document: ParsedDocument } | { ok: false; failure: ExtractFailure } {
-  const parsed = parseLocalMarkdown(markdown, {
+  const parsed = parseLocalMarkdown(cleanJinaMarkdown(markdown, envelope.title), {
     ...(envelope.title === undefined ? {} : { title: envelope.title }),
+    ...(sourceUrl === undefined ? {} : { baseUrl: sourceUrl }),
   });
   if (!parsed.ok) {
     return {
@@ -228,6 +248,12 @@ export function prefersServerExtraction(rawUrl: string): boolean {
 /** Configured hosts whose subdomains also skip the browser Jina attempt. */
 const SERVER_EXTRACTION_HOSTS = ["x.com", "twitter.com"] as const;
 
+function mayTryJinaAfterServer(failure: ExtractFailure): boolean {
+  // Do not bypass an explicit SSRF rejection or server rate limit through the
+  // third-party reader service.
+  return failure.fallbackEligible && failure.kind !== "rate-limited" && failure.status !== 422;
+}
+
 export async function importFromUrlDual(
   rawUrl: string,
   options: DualExtractOptions = {},
@@ -238,57 +264,13 @@ export async function importFromUrlDual(
     return { ok: false, failure: normalized.failure };
   }
   const target = normalized.url;
-  if (prefersServerExtraction(target)) {
-    if (options.signal?.aborted) return { ok: false, failure: extractFailure("cancelled") };
-    const notice: FallbackNotice = { reason: "site-policy", message: "正在通过服务器提取正文" };
-    options.onFallback?.(notice);
-    const result = await fetchViaServerFallback({ kind: "url", content: target }, {
-      ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
-      ...(options.serverDeadlineMs === undefined ? {} : { deadlineMs: options.serverDeadlineMs }),
-      ...(options.signal ? { signal: options.signal } : {}),
-    });
-    if (!result.ok) return { ok: false, failure: result.failure };
-    const mapped = sourceForServerExtractor(result.extractor);
-    return mapped.ok ? { ok: true, source: mapped.source, document: result.document, fallback: notice } : mapped;
+  const serverOnly = prefersServerExtraction(target);
+  if (options.signal?.aborted) return { ok: false, failure: extractFailure("cancelled") };
+
+  if (serverOnly) {
+    options.onFallback?.({ reason: "site-policy", message: "正在通过服务器读取网页正文" });
   }
-
-
-  const direct = await fetchViaJinaDirect(target, {
-    ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
-    ...(options.jinaDeadlineMs === undefined ? {} : { deadlineMs: options.jinaDeadlineMs }),
-    ...(options.maxResponseBytes === undefined ? {} : { maxBytes: options.maxResponseBytes }),
-    ...(options.signal === undefined ? {} : { signal: options.signal }),
-  });
-
-  let primaryFailure: ExtractFailure;
-  if (direct.ok) {
-    const built = documentFromJinaMarkdown(direct.markdown, {
-      ...(direct.title === undefined ? {} : { title: direct.title }),
-      ...(direct.author === undefined ? {} : { author: direct.author }),
-    });
-    if (built.ok) {
-      // Channel 1 succeeded: the backend is not contacted, by construction.
-      return { ok: true, source: "browser-jina", document: built.document };
-    }
-    primaryFailure = built.failure;
-  } else {
-    primaryFailure = direct.failure;
-  }
-
-  if (!primaryFailure.fallbackEligible) {
-    // Cancellation and invalid input end here. `invalid-url` cannot reach this
-    // branch (it returned above) but the shared predicate is what keeps the
-    // rule in one place.
-    return { ok: false, failure: primaryFailure };
-  }
-
-  const notice: FallbackNotice = {
-    reason: primaryFailure.kind,
-    message: primaryFailure.message,
-  };
-  options.onFallback?.(notice);
-
-  const fallback = await fetchViaServerFallback(
+  const server = await fetchViaServerFallback(
     { kind: "url", content: target },
     {
       ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
@@ -297,25 +279,64 @@ export async function importFromUrlDual(
     },
   );
 
-  if (!fallback.ok) {
-    const failure: ExtractFailure = {
-      ...fallback.failure,
-      // The user-facing sentence covers both halves of the attempt; the
-      // individual messages each promised a fallback that has now failed too.
-      message: combinedFailureMessage(primaryFailure, fallback.failure),
-    };
-    return { ok: false, failure, fallbackFailure: fallback.failure };
+  let serverFailure: ExtractFailure;
+  if (server.ok) {
+    const mapped = sourceForServerExtractor(server.extractor);
+    if (mapped.ok) return { ok: true, source: mapped.source, document: server.document };
+    serverFailure = mapped.failure;
+  } else {
+    serverFailure = server.failure;
   }
 
-  const mapped = sourceForServerExtractor(fallback.extractor);
-  if (!mapped.ok) {
-    // `fallback` is `ServerFallbackSuccess` here (the `!fallback.ok` branch
-    // returned earlier), so the failure to be reported is the mapping
-    // failure alone — there was no second transport error.
-    return { ok: false, failure: mapped.failure };
+  if (serverOnly || options.jinaFallback !== true || !mayTryJinaAfterServer(serverFailure)) {
+    return { ok: false, failure: serverFailure };
   }
 
-  return { ok: true, source: mapped.source, document: fallback.document, fallback: notice };
+  const notice: FallbackNotice = {
+    reason: serverFailure.kind,
+    message: "服务器 HTML 提取未成功，正在尝试 Jina 备用抓取…",
+  };
+  options.onFallback?.(notice);
+
+  const direct = await fetchViaJinaDirect(target, {
+    ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
+    ...(options.jinaDeadlineMs === undefined ? {} : { deadlineMs: options.jinaDeadlineMs }),
+    ...(options.maxResponseBytes === undefined ? {} : { maxBytes: options.maxResponseBytes }),
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
+  });
+
+  let jinaFailure: ExtractFailure | undefined;
+  let jinaDocument: ParsedDocument | undefined;
+  if (direct.ok) {
+    const built = documentFromJinaMarkdown(
+      direct.markdown,
+      {
+        ...(direct.title === undefined ? {} : { title: direct.title }),
+        ...(direct.author === undefined ? {} : { author: direct.author }),
+      },
+      // Jina returns Markdown, not the page's `<head>`, so there is no
+      // `og:image` to read here. What we do have is the page's address — and
+      // that is what relative image paths in the Markdown have to be resolved
+      // against, or `/uploads/hero.jpg` would be requested from our own
+      // origin and come back 404.
+      target,
+    );
+    if (built.ok) jinaDocument = built.document;
+    else jinaFailure = built.failure;
+  } else {
+    jinaFailure = direct.failure;
+  }
+
+  if (jinaDocument) {
+    return { ok: true, source: "browser-jina", document: jinaDocument, fallback: notice };
+  }
+
+  const fallbackFailure = jinaFailure ?? extractFailure("parse");
+  const failure: ExtractFailure = {
+    ...serverFailure,
+    message: combinedFailureMessage(serverFailure, fallbackFailure),
+  };
+  return { ok: false, failure, fallbackFailure };
 }
 
 /**

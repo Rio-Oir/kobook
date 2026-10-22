@@ -3,20 +3,23 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-// User settings store. Persisted to localStorage so each reader keeps their
+// User settings store. Persisted to localStorage so each user keeps their
 // own model choice and base URL — and, only on explicit opt-in, their key.
 //
-// There is deliberately no build-time `VITE_OPENAI_API_KEY` seed: a key baked
-// into the bundle is a *platform* key (one secret shared by every visitor,
-// shipped in the JS), which is exactly what bring-your-own-key replaces.
-// `VITE_OPENAI_BASE_URL` / `VITE_MODEL` may still prefill the address and
-// model for local development; they are not credentials.
+// When the app is deployed publicly, BYOK is the only way to give the LLM a
+// key: never bundle one into the build. There is deliberately no
+// `VITE_OPENAI_API_KEY` seed any more — a build-time key is a *platform*
+// key (one secret shared by every visitor, shipped in the JS bundle), which
+// the product rules replace with per-user BYOK. `VITE_OPENAI_BASE_URL` /
+// `VITE_MODEL` may still prefill the address and model for local
+// development; they are not credentials.
 //
-// The persisted object also records whose account it is, and `clearApiKey`
-// drops the credential on sign-out without touching the provider/model choice,
-// so signing back in only needs the key.
+// Phase 2 adds the same owner stamp as `lib/store.ts`: the persisted object
+// records whose account this is, and `clearApiKey` drops the credential on
+// sign-out without touching the provider/model choice, so re-login only
+// needs the key.
 //
-// Two properties the shape expresses that a simpler one could not:
+// Phase 4 adds two things the earlier shape could not express:
 //
 //   1. `rememberKey` — the key lives in memory by default and is only
 //      written to `gloss-settings` after the user ticks "仅在此设备记住";

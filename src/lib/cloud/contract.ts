@@ -4,19 +4,20 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /**
- * The optional cloud contract — the seam between the local reader and any
- * implementation that adds accounts, sync or a hosted model.
+ * The optional cloud contract — the *only* seam between the base line and the
+ * value-added line.
  *
  * ## Why this exists
  *
- * The product used to be one tree with a build-time switch, so the same
- * `src/**` compiled twice — once with accounts and cloud sync and once
- * without. That made "this build makes no cloud request" true at runtime but
- * left the account and cloud code *in the local source and in the dependency
- * lock*, so the reader could not be installed, audited or shipped without
- * dragging in an auth vendor and a database driver it never used.
+ * The product used to be one tree with a build-time channel switch
+ * (`src/lib/release.ts`): the same `src/**` compiled twice, once with accounts
+ * and cloud sync and once without. That made "the free build makes no cloud
+ * request" true at runtime but left the account/cloud code *in the base
+ * source and in the base dependency lock* — so the base line could not be
+ * installed, audited or released without dragging in an auth vendor and a
+ * database driver it never used.
  *
- * The switch is gone, and so are those dependencies. This side owns:
+ * The switch is gone. Base owns:
  *
  *   - reading, local import, anonymous URL extraction, BYOK, notes,
  *     highlights, backup/restore and the offline shell;
@@ -24,43 +25,39 @@
  *     session epoch that make account-scoped caches reconcilable;
  *   - **this contract**, and the fact that nothing implements it by default.
  *
- * An implementation is a separate module that calls `registerCloudAdapter`
- * once at startup; nothing here imports it, and no implementation is shipped
- * with the reader.
+ * The value-added line owns every implementation. It ships a module that
+ * calls `registerCloudAdapter` once at startup; base never imports it.
  *
  * ## The rules an implementation must keep
  *
  * 1. **Absence is the default and is not an error.** With no adapter
- *    registered every operation below is a no-op and the local flow —
- *    save locally, read, annotate, back up — completes unchanged. No code
- *    here may branch on whether an adapter exists in order to *read*.
- * 2. **Nothing here may block a local write.** Local stores are written
- *    first and the adapter is called afterwards. An adapter that is slow, down,
+ *    registered every operation below is a no-op and the base flow —
+ *    save locally, read, annotate, back up — completes unchanged. No base
+ *    code may branch on whether an adapter exists in order to *read*.
+ * 2. **Nothing here may block a local write.** Base writes to its stores
+ *    first and calls the adapter afterwards. An adapter that is slow, down,
  *    throwing *synchronously*, or rejecting must not stop a save, a note, or a
  *    navigation; a failure is a cloud failure the user is told about, never a
- *    local failure. This side enforces that itself, in `callAdapter` /
+ *    local failure. Base enforces this itself, in `callAdapter` /
  *    `callAdapterHook` below — an implementation does not have to be careful
- *    about it, and must not rely on the caller being sloppy about it either.
- * 3. **Identity is passed in, never inferred.** The caller hands over the
- *    frozen `{ ownerUserId, epoch }` it captured at the start of the
- *    operation. An implementation must re-check it before applying a result,
- *    so a response that lands after a sign-out cannot be attributed to the
- *    next account.
- * 4. **The adapter never re-implements a local data structure.** It reports a
- *    verdict and this side decides what the local record keeps, so there is
- *    one implementation of "what a note is". Where a merge genuinely needs
- *    remote-only knowledge — turning a server note row into a local note, and
+ *    about it, and must not rely on base being sloppy about it either.
+ * 3. **Identity is passed in, never inferred.** Base hands over the frozen
+ *    `{ ownerUserId, epoch }` it captured at the start of the operation. An
+ *    implementation must re-check it before applying a result, so a response
+ *    that lands after a sign-out cannot be attributed to the next account.
+ * 4. **The adapter never re-implements a base data structure.** It reports a
+ *    verdict and base decides what the local record keeps, so there is one
+ *    implementation of "what a note is". Where a merge genuinely needs
+ *    cloud-only knowledge — turning a server note row into a local note, and
  *    the version-aware reconciliation policy — the adapter does it *through
  *    the store's existing actions* (`upsertRemoteNote`, `deleteNote`,
  *    `updateNote`), never by declaring its own note or article type.
  * 5. **No credential, and no user content the user did not ask to sync, may
  *    leave through this seam.** In particular a BYOK key is never part of any
- *    request built here: it belongs to the browser session, is sent only to
- *    the endpoint the user confirmed, and is excluded from every payload,
- *    export and log this application writes.
+ *    request built here — see `docs/收费方案与本机API密钥安全.md`.
  */
 
-import type { Article, ParsedDocument, UserRole } from "../types";
+import type { Article, ContentBlock, ParsedDocument, UserRole } from "../types";
 import type { ExtractSource } from "../browser-extract-errors";
 
 /**
@@ -137,6 +134,31 @@ export interface CloudArticleUpload {
   identity: CloudOwnerIdentity;
 }
 
+/** One edited body to append as a new version of a known server article. */
+export interface CloudArticleVersionUpload {
+  /** The server article id (`Article.remoteId`), never the local id. */
+  remoteId: string;
+  blocks: ContentBlock[];
+  textHash: string;
+  /** The version the edit was made from; the server refuses a stale base. */
+  baseVersionId?: string;
+  identity: CloudOwnerIdentity;
+}
+
+/**
+ * Outcome of one edited-version upload.
+ *
+ * `conflict` is not a transport failure — the server is reachable and has a
+ * newer version, so the client must not retry blindly. `stale-owner` is
+ * applied by touching nothing, same rule as upload verdicts.
+ */
+export type CloudVersionVerdict =
+  | { status: "uploaded"; versionId: string }
+  | {
+      status: "conflict" | "missing" | "rejected" | "network-error" | "stale-owner";
+      message?: string;
+    };
+
 export interface CloudNoteDelete {
   localNoteId: string;
   remoteId: string;
@@ -200,6 +222,15 @@ export interface CloudAdapter {
   uploadArticle(input: CloudArticleUpload): Promise<CloudUploadVerdict>;
 
   /**
+   * Append an edited body as the next version of an existing server article.
+   *
+   * Optional so an adapter built before editing existed remains a valid
+   * adapter: base treats its absence as "this cloud cannot store edits" and
+   * keeps the local edit marked as unsynced. Never awaited by a local write.
+   */
+  updateArticleVersion?(input: CloudArticleVersionUpload): Promise<CloudVersionVerdict>;
+
+  /**
    * Create the server row for a note and report its binding, or `null` when
    * the note must stay local (no server article yet, unusable anchor,
    * refusal). Base writes the returned binding onto the local note.
@@ -236,9 +267,9 @@ export interface CloudAdapter {
 let adapter: CloudAdapter | null = null;
 
 /**
- * Install the implementation.
+ * Install the value-added implementation.
  *
- * Called by the host entry point, once, before the app renders. Passing
+ * Called by the value-added entry point, once, before the app renders. Passing
  * `null` uninstalls it, which is what the tests use to assert the
  * no-adapter behaviour without a module reset.
  */

@@ -10,7 +10,7 @@
  * each carries an `ownerUserId` stamp. This module is the single place that
  * decides what happens to that data when the resolved identity changes.
  *
- * It lives here, not in the cloud adapter, because the *decision* is a
+ * It lives in base, not in the cloud adapter, because the *decision* is a
  * property of the local data format: an old blob with no stamp must still be
  * readable, a foreign owner's cache must not stay on screen, and the epoch
  * must advance so in-flight work from the previous session is dropped. None
@@ -65,8 +65,8 @@ export function applyOwnership(resolvedUserId: string | null): OwnerDecision {
     // isolate and nothing to destroy — and destroying it is actively
     // wrong: this runs on every session probe, including the one that fires
     // on page load, so a signed-out reader who configured a BYOK key or
-    // pasted an article would lose both simply by refreshing. A startup probe
-    // that resolves to "still anonymous" must not erase user settings.
+    // pasted an article would lose both simply by refreshing. The rule is
+    // "anonymous→anonymous 的启动探测不能擦除用户设置".
     if (current === ANONYMOUS_OWNER) {
       notifyOwnerResolved(null);
       return "keep";
@@ -74,8 +74,7 @@ export function applyOwnership(resolvedUserId: string | null): OwnerDecision {
     // A real account's cache is present and the session ended: isolate it.
     // Every credential and private item goes, and the owner stamp returns to
     // anonymous. The account's content is *not* converted into anonymous
-    // content — that direction would silently publish one person's library
-    // into the next reader's space.
+    // content — the rule is explicit that it must not be.
     useStore.getState().clearUserCache();
     useSettings.getState().clearApiKey();
     useSettings.getState().setOwner(ANONYMOUS_OWNER);
@@ -105,11 +104,10 @@ export function applyOwnership(resolvedUserId: string | null): OwnerDecision {
   // *in place* — the reader's article, its notes and the BYOK key all stay
   // readable, which is the whole point of adopting rather than clearing.
   //
-  // The cloud half is where the subtler rule lives: signing in must never
-  // silently upload what was read anonymously. An implementation that has
-  // somewhere to upload to must snapshot the anonymous workspace aside and
-  // ask before merging. It does that from `onOwnerResolved`, which runs after
-  // the stamps below.
+  // The cloud half is where the subtler rule lives ("登录时不静默上传匿名
+  // 内容"): an implementation that has somewhere to upload to must snapshot
+  // the anonymous workspace aside and ask before merging. It does that from
+  // `onOwnerResolved`, which runs after the stamps below.
   useStore.getState().setOwner(resolvedUserId);
   useSettings.getState().setOwner(resolvedUserId);
   useTheme.getState().setOwner(resolvedUserId);

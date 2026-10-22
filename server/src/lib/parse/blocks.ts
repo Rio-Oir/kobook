@@ -6,11 +6,12 @@
 /**
  * Shared helpers for turning extractor output into `ContentBlock`s.
  *
- * The rules the two implementations must not regress:
+ * The rules that matter for the audit findings this phase must not
+ * regress:
  *
  *  - There is NO minimum-length filter. The old frontend parser dropped every
  *    block shorter than 20 characters, which deleted short Chinese
- *    paragraphs and most headings. A block is retained whenever
+ *    paragraphs and most headings (audit P1#3). A block is retained whenever
  *    it has non-whitespace content after normalisation, however short.
  *  - Block ids embed the 1-based index, so two blocks with identical text
  *    are still distinguishable (needed for duplicate-paragraph anchoring).
@@ -27,16 +28,8 @@ import type {
 } from "../../../../shared/contracts/index.js";
 import { canonicalizeSpans, spansAreSound, type RawMark } from "./inline.js";
 
-/**
- * Version stamp written into every parsed document.
- *
- * The value is persisted (`ParsedDocument.extractorVersion`) and travelled with
- * documents already stored on users' machines, so it is left exactly as it was:
- * it identifies which pipeline produced a document, and changing the spelling
- * would rewrite a field that is already on disk. Bump it when the parsing
- * pipeline changes in a way that alters block output.
- */
-export const EXTRACTOR_VERSION = "phase1.2";
+/** Bump when the parsing pipeline changes in a way that alters block output. */
+export const EXTRACTOR_VERSION = "phase1.3";
 
 export function sha256Hex(input: string): string {
   return createHash("sha256").update(input, "utf8").digest("hex");
@@ -222,6 +215,16 @@ export interface AddBlockOptions {
   level?: number;
   lang?: string | null;
   ordered?: boolean;
+  src?: string;
+  alt?: string;
+  title?: string;
+  /** Table cells (first row is the header), only applied when `type` is `table`. */
+  rows?: string[][];
+  /** List nesting depth (0-based), only applied when `type` is `listItem`. */
+  depth?: number;
+  /** Task-list state, only applied when `type` is `listItem`. */
+  task?: boolean;
+  checked?: boolean;
   /**
    * Emphasis found in the source, as offsets onto the *raw* text passed to
    * `add` — before normalisation. Callers only supply these when the raw
@@ -257,7 +260,18 @@ export class BlockCollector {
     };
     if (type === "heading") block.level = opts.level ?? 1;
     if (type === "code") block.lang = opts.lang ?? null;
-    if (type === "listItem") block.ordered = opts.ordered ?? false;
+    if (type === "listItem") {
+      block.ordered = opts.ordered ?? false;
+      block.depth = opts.depth ?? 0;
+      if (opts.task) {
+        block.task = true;
+        block.checked = opts.checked ?? false;
+      }
+    }
+    if (type === "image" && opts.src) block.src = opts.src;
+    if (type === "image" && opts.alt) block.alt = opts.alt;
+    if (type === "image" && opts.title) block.title = opts.title;
+    if (type === "table" && opts.rows && opts.rows.length > 0) block.rows = opts.rows;
     if (measured && marks && marks.length > 0) {
       const spans = shiftSpans(marks, measured.map, normalized.length);
       // Drop rather than repair. Emphasis that cannot be located exactly is

@@ -13,15 +13,16 @@
  *
  * That claim was wrong. Fastify's default AJV configuration sets
  * `removeAdditional: true`, so an unknown property is silently **stripped**
- * and the request proceeds. The protection the route actually needs (no
- * caller may choose the outbound destination) still holds — the handler only
- * ever reads server-side configuration, so a stripped key could not have
+ * and the request proceeds. The protection the route actually needs (the
+ * Jina base URL comes from server configuration only) still holds — the
+ * handler only ever reads `process.env`, so a stripped key could not have
  * influenced it either way — but "unrepresentable" and "stripped" are
  * different statements, and a comment that says the stronger one is the
  * kind of thing a later change quietly relies on.
  *
- * This file pins the real behaviour so the comment cannot drift back, and so
- * the service boundary tests measure the thing they claim to measure.
+ * This file pins the real behaviour so the comment cannot drift back, and
+ * so the end-to-end gate in `tests/phase3.ts` is measuring the thing it
+ * claims to measure.
  */
 
 import assert from "node:assert/strict";

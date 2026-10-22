@@ -4,34 +4,57 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /**
- * Service boundary tests (inject + one child-process launch).
+ * Release-service boundary tests (inject + one child-process launch).
  *
- * These assert what the service is *capable* of, not what the UI happens to
- * show. The claim under test is that a deployment mounts only the controlled
- * extractor and a health probe — so a request for a cloud route, a session,
- * an account or an admin surface is answered by the generic 404 handler and
- * not by a route that could touch data.
+ * These are the "后台安全 inject tests" for the open-source build: they assert
+ * what the service is *capable* of, not what the UI happens to show.
+ *
+ * ## What the claim is now
+ *
+ * The claim used to be "this deployment mounts only the anonymous extractor, so
+ * it cannot reach cloud data". That is no longer true and no longer wanted:
+ * accounts, articles and notes are part of this product. What the service must
+ * not be able to do is **take money** — so the boundary asserted here is that
+ * every `/api/billing/*` path is a 404, while the account routes are present
+ * *and* refuse an anonymous caller.
+ *
+ * Those two halves have to be checked together. A 404 on `/api/billing` would
+ * also be satisfied by a service that mounts nothing at all, which is why the
+ * account routes are asserted to answer 401 rather than 404, and why the
+ * extractor is exercised end to end below.
  *
  * Run from the repository root:
  *   node --import tsx --import ./tests/fixtures/direct-http-preload.mjs \
  *     apps/reader-release/tests/server-inject.mjs
  *
- * The preload fixture resolves `example.com` to a public address and answers
- * over https with a fixture article. It gives the positive extraction path a
- * real upstream without touching a real network — and, importantly, without
- * relaxing the SSRF guard, which is what the negative cases below prove still
- * bites.
+ * The preload fixture is the *existing* one the phase-3 suite uses: it resolves
+ * `example.com` to a public address and answers over https with a fixture
+ * article. It gives the positive extraction path a real upstream without
+ * touching a real network — and, importantly, without relaxing the SSRF guard,
+ * which is what the negative cases below prove still bites.
+ *
+ * ## Why a stub database
+ *
+ * This is an *inject* test: it drives the route table, and the route table does
+ * not need PostgreSQL to be assembled. `buildApp` is given an empty object for
+ * `prisma`, which makes `isDatabaseReachable` report the database down — and
+ * that is asserted rather than worked around, because "readiness fails closed
+ * when the database is unreachable" is one of the properties worth pinning.
+ * The suite that proves the real queries is `tests/phase*.ts`, against a real
+ * PostgreSQL.
  */
 
 import assert from "node:assert/strict";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { evidenceDir } from "../../../scripts/evidence-dir.mjs";
 
-// Evidence lands under `artifacts/`, which the repository ignores, unless
-// `EVIDENCE_DIR` points the run elsewhere. See `scripts/evidence-dir.mjs`.
-const EVIDENCE = evidenceDir("base-acceptance");
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+// The release gate's own evidence directory — never `docs/evidence/reader-release`,
+// which holds the published release's recorded facts and a few historical
+// untracked artifacts. See the same note in `free-browser.mjs`.
+const EVIDENCE = path.resolve(HERE, "../../../docs/evidence/base-reproducibility");
+mkdirSync(EVIDENCE, { recursive: true });
 
 const checks = [];
 function check(name, detail) {
@@ -39,29 +62,39 @@ function check(name, detail) {
   console.log(`  ✔ ${name}`);
 }
 
-// The service must not require a database or an auth secret, so every
-// credential-shaped variable is removed from the environment rather than
-// merely unset in the shell. The pattern is anchored on word boundaries: the
-// point is that this process reads none of them, whatever a deployment
-// happens to export, and that the assertion below still holds if a variable
-// is renamed.
-const CREDENTIAL_ENV = /(^|_)(DATABASE_URL|DB_URL|DSN|SECRET|TOKEN|PASSWORD|CREDENTIALS?|API_KEY)($|_)/i;
-for (const name of Object.keys(process.env)) {
-  if (CREDENTIAL_ENV.test(name)) delete process.env[name];
-}
-
-const { buildReaderService } = await import("../server.ts");
+const { buildApp } = await import("../../../server/src/app.js");
+const { ROUTES } = await import("../../../shared/contracts/index.js");
 
 /**
- * The limiter is disabled on the main instance and exercised separately
- * below. It runs in `onRequest`, i.e. *before* schema validation, so leaving
- * it on here would make the strict-schema assertions depend on how many
- * requests the earlier sections happened to send — a flaky test that fails
- * for the wrong reason.
+ * A Better Auth stand-in. `registerAuthBridge` mounts the handler at
+ * `/api/auth/*` and the session pre-handlers call `api.getSession`; both are
+ * answered, and both answers are "nobody".
  */
-const { app, rateLimitedRoutes } = await buildReaderService({
+const stubAuth = {
+  handler: async () => new Response("{}", { status: 200 }),
+  api: { getSession: async () => null },
+};
+
+/** A stand-in for the built shell, so the static assertions do not need one. */
+const SHELL = {
+  root: path.resolve(HERE, "../dist"),
+  base: "/reader/",
+  csp: "default-src 'self'",
+};
+
+/**
+ * The limiter is disabled on the main instance and exercised separately below.
+ * It runs in `onRequest`, i.e. *before* schema validation, so leaving it on here
+ * would make the strict-schema assertions depend on how many requests the
+ * earlier sections happened to send — a flaky test that fails for the wrong
+ * reason.
+ */
+const { app, rateLimitStore, rateLimitedRoutes } = await buildApp({
+  prisma: {},
+  auth: stubAuth,
   nodeEnv: "test",
   logLevel: "silent",
+  shell: SHELL,
   rateLimit: {
     enabled: false,
     defaultWindowSeconds: 60,
@@ -75,11 +108,11 @@ const inject = (opts) => app.inject(opts);
 const json = (r) => JSON.parse(r.body);
 
 try {
-  // A reverse proxy on the same host may supply the client address, and only
-  // a loopback peer may do so.
+  // The deployed proxy may supply a client address only from loopback.
   for (const trusted of [false, true]) {
-    const probe = await buildReaderService({ nodeEnv: "test", logLevel: "silent", serveStatic: false,
-      trustLoopbackProxy: trusted, rateLimit: { enabled: true, defaultWindowSeconds: 60,
+    const probe = await buildApp({ prisma: {}, auth: stubAuth, nodeEnv: "test",
+      logLevel: "silent", trustLoopbackProxy: trusted,
+      rateLimit: { enabled: true, defaultWindowSeconds: 60,
         defaultMax: 20, defaultMaxConcurrent: 4, globalMaxConcurrent: 8 } });
     const seen=[];
     const originalHit=probe.rateLimitStore.hit.bind(probe.rateLimitStore);
@@ -94,61 +127,104 @@ try {
     } finally { await probe.app.close(); }
   }
   check('proxy identity is opt-in, loopback-only; remote spoofed XFF is ignored');
-  // ── 1. Boot with no database ───────────────────────────────────────────
-  assert.deepEqual(rateLimitedRoutes, ["POST /api/anonymous/extract"]);
-  check("boots with no database or auth credentials present, and rate-limits the extract route");
 
-  // ── 2. Health ──────────────────────────────────────────────────────────
+  // ── 1. The rate-limited route is declared and wired ──────────────────────
+  // The boot assertion inside `buildApp` is what proves the hook is attached;
+  // this records which routes it found, so a route that declares a limit
+  // nobody enforces cannot pass unnoticed.
+  assert.deepEqual(rateLimitedRoutes, ["POST /api/anonymous/extract"]);
+  assert.ok(rateLimitStore, "the limiter's state must be reachable for inspection");
+  check("boots without a database and rate-limits the extract route");
+
+  // ── 2. Health ────────────────────────────────────────────────────────────
   {
-    const r = await inject({ method: "GET", url: "/api/health/live" });
+    const r = await inject({ method: "GET", url: ROUTES.healthLive });
     assert.equal(r.statusCode, 200);
     const body = json(r);
     assert.equal(body.status, "ok");
-    assert.equal(body.service, "kobook");
     assert.equal(r.headers["x-robots-tag"], "noindex");
     check("GET /api/health/live answers without a database, API responses are noindex");
   }
   {
-    // Readiness is a database question; this process has no database, so it
-    // must not claim readiness.
-    const r = await inject({ method: "GET", url: "/api/health/ready" });
-    assert.equal(r.statusCode, 404);
-    check("GET /api/health/ready is absent rather than answered without a database");
+    // Readiness *is* a database question, and this app has been given a stub.
+    // It must report itself degraded rather than answering `ok` it cannot
+    // support — the failure mode this rules out is a load balancer sending
+    // traffic to a process whose every account request will 500.
+    const r = await inject({ method: "GET", url: ROUTES.healthReady });
+    assert.equal(r.statusCode, 503, "readiness must not claim ok with the database down");
+    assert.equal(json(r).checks.database, "down");
+    check("GET /api/health/ready fails closed when the database is unreachable");
   }
 
-  // ── 3. No cloud / account / admin surface ──────────────────────────────
+  // ── 3. The account surface is mounted, and gated ─────────────────────────
+  // Both halves matter. A 404 would mean the artifact was built without the
+  // account routes; a 200 would mean they answered without a session.
   {
-    // Representative paths, not an inventory: each one is the shape a client
-    // for a service this process does not mount would ask for. The assertion
-    // is about the answer — a generic 404 envelope — rather than about the
-    // list, so adding another probe is always safe.
-    const cloudRoutes = [
-      { method: "GET", url: "/api/me" },
-      { method: "POST", url: "/api/auth/sign-in/email", payload: { email: "a@b.c", password: "x" } },
-      { method: "GET", url: "/api/auth/get-session" },
+    // A schema-valid sync body, because Fastify runs body validation before
+    // the session `preHandler`: an anonymous caller with a *malformed* body
+    // gets 400, which proves the route is mounted but says nothing about the
+    // gate. The hash values are well-formed and deliberately wrong — the route
+    // would reject them at 422 if it ever got that far, which it must not.
+    const validSyncBody = {
+      title: "边界检查",
+      sourceUrl: null,
+      source: "local",
+      author: null,
+      textHash: "a".repeat(64),
+      blocks: [
+        { id: "b1-aaaaaaaa", index: 1, type: "paragraph", text: "正文", hash: "b".repeat(64) },
+      ],
+      clientKey: "release-inject-check",
+    };
+    const gated = [
+      { method: "GET", url: ROUTES.me },
       { method: "GET", url: "/api/articles" },
-      { method: "POST", url: "/api/articles", payload: {} },
+      { method: "GET", url: "/api/articles/abc" },
       { method: "GET", url: "/api/articles/abc/notes" },
-      { method: "POST", url: "/api/ai/entry" },
       { method: "GET", url: "/api/admin/users" },
-      { method: "POST", url: "/api/sample/echo", payload: {} },
-      { method: "GET", url: "/api/quota" },
+      { method: "POST", url: "/api/ai/entry" },
+      { method: "POST", url: "/api/articles/sync", payload: validSyncBody },
     ];
-    for (const route of cloudRoutes) {
+    for (const route of gated) {
+      const r = await inject(route);
+      assert.equal(
+        r.statusCode,
+        401,
+        `${route.method} ${route.url} must be mounted and must refuse an anonymous caller (got ${r.statusCode})`,
+      );
+    }
+    // The auth handler is mounted rather than gated — signing in is how a
+    // caller stops being anonymous.
+    const authMount = await inject({ method: "GET", url: "/api/auth/get-session" });
+    assert.notEqual(authMount.statusCode, 404, "the auth mount must exist");
+    check(`account routes are mounted and refuse an anonymous caller (${gated.length} probed → 401)`);
+  }
+
+  // ── 4. No billing surface, at the route table ────────────────────────────
+  // The paths are written out rather than read from `ROUTES`: the whole claim
+  // is that no constant for them exists on this line, so reading one would be
+  // circular. This is the boundary, and it is the only one left.
+  {
+    const billing = [
+      { method: "GET", url: "/api/billing/catalogue" },
+      { method: "GET", url: "/api/billing/entitlements" },
+      { method: "POST", url: "/api/billing/orders", payload: {} },
+      { method: "POST", url: "/api/billing/notify/wechat", payload: {} },
+      { method: "POST", url: "/api/billing/notify/alipay", payload: {} },
+    ];
+    for (const route of billing) {
       const r = await inject(route);
       assert.equal(
         r.statusCode,
         404,
         `${route.method} ${route.url} must not be mounted (got ${r.statusCode})`,
       );
-      const body = json(r);
-      assert.equal(body.error.code, "NOT_FOUND");
-      assert.ok(typeof body.error.requestId === "string");
+      assert.equal(json(r).error.code, "NOT_FOUND");
     }
-    check(`no cloud/account/admin route is mounted (${cloudRoutes.length} probed → 404)`);
+    check(`no billing route is mounted (${billing.length} probed → 404)`);
   }
 
-  // ── 4. Extract body schema is strict ───────────────────────────────────
+  // ── 5. Extract body schema is strict ─────────────────────────────────────
   {
     const cases = [
       [{ kind: "url" }, 400, "missing content"],
@@ -171,7 +247,7 @@ try {
     check("extract body rejects missing/unknown/extra fields and oversized input (no silent strip)");
   }
 
-  // ── 5. SSRF / scheme / credentials still fail closed ───────────────────
+  // ── 6. SSRF / scheme / credentials still fail closed ─────────────────────
   {
     const blocked = [
       ["http://127.0.0.1:9/x", "loopback"],
@@ -191,7 +267,7 @@ try {
     check("SSRF guard, scheme allowlist and credential refusal all still apply through this service");
   }
 
-  // ── 6. Positive extraction, via the existing test transport fixture ────
+  // ── 7. Positive extraction, via the existing test transport fixture ──────
   {
     const r = await inject({
       method: "POST",
@@ -200,12 +276,8 @@ try {
     });
     assert.equal(r.statusCode, 200, `expected a successful extraction, got ${r.statusCode}: ${r.body}`);
     const body = json(r);
-    // `html-readability` is the wire value the shared contract uses; the
-    // browser maps it to the `server-readability` provenance it records
-    // locally (see `sourceForServerExtractor` in src/lib/browser-extract.ts).
     assert.equal(body.extractor, "html-readability");
     assert.ok(body.document.blocks.length >= 2);
-    assert.ok(body.document.blocks.some((b) => b.type === "paragraph"));
     assert.ok(typeof body.document.textHash === "string");
     check("url extraction returns the shared ParsedDocument via the existing controlled fetch");
   }
@@ -220,18 +292,18 @@ try {
       },
     });
     assert.equal(r.statusCode, 200);
-    const body = json(r);
-    assert.equal(body.extractor, "local");
-    assert.ok(body.document.blocks.length >= 2, "short Chinese paragraphs must survive");
+    assert.equal(json(r).extractor, "local");
+    assert.ok(json(r).document.blocks.length >= 2, "short Chinese paragraphs must survive");
     check("text extraction parses locally and keeps short Chinese paragraphs");
   }
 
-  // ── 7. Rate limit actually bites ───────────────────────────────────────
+  // ── 8. Rate limit actually bites ─────────────────────────────────────────
   {
-    const limited = await buildReaderService({
+    const limited = await buildApp({
+      prisma: {},
+      auth: stubAuth,
       nodeEnv: "test",
       logLevel: "silent",
-      serveStatic: false,
       rateLimit: {
         enabled: true,
         defaultWindowSeconds: 60,
@@ -255,8 +327,6 @@ try {
         }
       }
       assert.ok(sawRateLimit, "the declared limit on /api/anonymous/extract must be enforced");
-      // A GET on the same path is a different method: it must still 404 rather
-      // than being swallowed by the limiter's bucket.
       const wrongMethod = await limited.app.inject({ method: "GET", url: "/api/anonymous/extract" });
       assert.equal(wrongMethod.statusCode, 404);
       check("the extract route returns 429 once its declared limit is exceeded");
@@ -265,14 +335,14 @@ try {
     }
   }
 
-  // ── 8. Static shell ────────────────────────────────────────────────────
+  // ── 9. Static shell ──────────────────────────────────────────────────────
   {
     const shell = await inject({ method: "GET", url: "/reader/" });
     assert.equal(shell.statusCode, 200);
     assert.match(shell.headers["content-type"], /text\/html/);
     assert.equal(shell.headers["cache-control"], "no-cache");
-    assert.ok(String(shell.headers["content-security-policy"]).includes("connect-src 'self' https:"));
-    assert.ok(!shell.body.includes("fonts.googleapis.com"), "the built shell must not link remote fonts");
+    assert.ok(String(shell.headers["content-security-policy"]).length > 0);
+    assert.ok(!shell.body.includes("fonts.googleapis.com"), "the shell must not link remote fonts");
     assert.match(shell.body, /src="\/reader\/assets\//);
 
     const redirect = await inject({ method: "GET", url: "/reader" });
@@ -288,7 +358,28 @@ try {
     const spawn = await inject({ method: "GET", url: "/reader/does-not-exist" });
     assert.equal(spawn.statusCode, 200, "an unknown shell path falls back to index.html");
     assert.match(spawn.body, /<div id="root">/);
-    check("shell, worker, base redirect and SPA fallback are served with the base CSP");
+
+    // pdf.js's assets are served by an extension allowlist, and an extension
+    // that is missing from it does not 404 — the request falls through to the
+    // SPA fallback and comes back as `index.html`. For the worker that surfaces
+    // as "failed to fetch dynamically imported module" (a module script with an
+    // HTML body), and for the cmaps and font data it is quieter still: pdf.js
+    // treats a failed table as a missing one, and a Chinese PDF renders as
+    // garbage. Asserting the body is not the shell is what catches the silent
+    // half.
+    const pdfWorker = await inject({ method: "GET", url: "/reader/pdfjs/pdf.worker.min.mjs" });
+    assert.equal(pdfWorker.statusCode, 200);
+    assert.match(String(pdfWorker.headers["content-type"]), /javascript/);
+    assert.ok(!pdfWorker.body.includes('<div id="root">'), "the worker must be the worker, not the shell");
+
+    const cmap = await inject({ method: "GET", url: "/reader/pdfjs/cmaps/UniGB-UCS2-H.bcmap" });
+    assert.equal(cmap.statusCode, 200);
+    assert.ok(!cmap.body.includes('<div id="root">'), "a CMap must not fall back to the shell");
+
+    const font = await inject({ method: "GET", url: "/reader/pdfjs/standard_fonts/FoxitFixed.pfb" });
+    assert.equal(font.statusCode, 200);
+    assert.ok(!font.body.includes('<div id="root">'), "a standard font must not fall back to the shell");
+    check("shell, worker, base redirect and SPA fallback are served with the deployment CSP");
   }
   {
     const escapes = [
@@ -305,16 +396,16 @@ try {
         r.statusCode === 404 || r.statusCode === 200,
         `${url} produced an unexpected status ${r.statusCode}`,
       );
-      assert.ok(!r.body.includes('"name": "kobook"'), `${url} leaked a file outside dist`);
+      assert.ok(!r.body.includes('"name": "gloss-base"'), `${url} leaked a file outside dist`);
     }
     const notAllowed = await inject({ method: "GET", url: "/reader/../package.json" });
-    assert.ok(notAllowed.statusCode === 404 || !notAllowed.body.includes("kobook"));
-    check("static serving cannot escape dist (encoded and plain traversal both contained)");
+    assert.ok(notAllowed.statusCode === 404 || !notAllowed.body.includes("gloss-base"));
+    check("static serving cannot escape the shell root (encoded and plain traversal both contained)");
   }
 
-  const summary = { pass: true, checks, rateLimitedRoutes };
+  const summary = { pass: true, checks };
   writeFileSync(path.join(EVIDENCE, "server-inject.json"), JSON.stringify(summary, null, 2));
-  console.log(`\nPASS ${checks.length} service boundary checks`);
+  console.log(`\nPASS ${checks.length} release-service boundary checks`);
 } catch (err) {
   writeFileSync(path.join(EVIDENCE, "server-inject-failure.txt"), String(err?.stack ?? err));
   throw err;

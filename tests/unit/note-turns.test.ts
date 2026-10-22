@@ -6,16 +6,17 @@
 /**
  * Note turns: the structured conversation a note carries.
  *
- * The original question and each follow-up are stored separately. The store
- * is where that structure is maintained, and it is maintained for **every**
- * note — including one that will never be uploaded — because:
+ * The plan requires the original question and each follow-up to be stored
+ * separately. The store is where that structure is maintained, and it is
+ * maintained for **every** note — including an anonymous one that will
+ * never reach the server — because:
  *
  *   - a follow-up's context is built from the turns. A note whose history
  *     lives only in the flattened `answer` reaches the model with the
  *     question and one undivided blob, so after the second follow-up the
  *     boundaries between exchanges are gone;
- *   - an upload sends `turns`. A note whose turns were never recorded locally
- *     would arrive as a question with one undivided answer.
+ *   - the migration uploads `turns`. A note whose turns were never recorded
+ *     locally arrives at the server as a question with one answer.
  */
 
 import assert from "node:assert/strict";

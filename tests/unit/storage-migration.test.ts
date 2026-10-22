@@ -6,17 +6,17 @@
 /**
  * Storage migration gate.
  *
- * The oldest persisted stores had no `ownerUserId` and no `version` key.
- * Owner stamps were later added to both `gloss-storage` (articles + notes)
- * and `gloss-settings` (API key), so the persist middleware's `migrate` runs
+ * The phase-1 store had no `ownerUserId` and no `version` key. Phase 2
+ * introduces owner stamps on both `gloss-storage` (articles + notes) and
+ * `gloss-settings` (API key), so the persist middleware's `migrate` runs
  * when the version field is present and mismatches. The migration must:
  *
- *   1. preserve every existing article, note, provider, model and baseURL a
- *      user accumulated — those were typed in by hand, and losing them on the
- *      first reload after an upgrade is unacceptable;
- *   2. stamp the owner as `anonymous` so reconciliation on that user's first
- *      sign-up takes the `adopt` path instead of `clear` (which would destroy
- *      the just-migrated data again);
+ *   1. preserve every existing article, note, provider, model and baseURL
+ *      that a phase-1 user accumulated — those were typed in by hand and
+ *      losing them on the first reload after phase 2 ships is unacceptable;
+ *   2. stamp the owner as `anonymous` so the reconciliation rule on the
+ *      first sign-up of a v1 user takes the `adopt` path instead of `clear`
+ *      (which would destroy the just-migrated data again);
  *   3. be a no-op for already-v2 payloads — re-running it must not corrupt
  *      a stamped owner.
  *
@@ -24,7 +24,7 @@
  *   - "v0" (no version key): the persist middleware does not call migrate
  *     at all, but its default `merge` keeps the initial state's
  *     `ownerUserId: "anonymous"` and overlays the persisted articles.
- *     This is what the oldest real install looked like.
+ *     This is what a real phase-1 install looked like.
  *   - "v1" (version: 1): migrate is called with version=1, explicitly
  *     stamps the owner, and the blob is rewritten to version 2.
  *
@@ -36,6 +36,7 @@
 
 import assert from "node:assert/strict";
 import { test, before, beforeEach } from "node:test";
+import { installMemoryLocalStorage, resetBodyStorage } from "./storage-fixture.js";
 
 const memory = new Map<string, string>();
 const localStoragePolyfill = {
@@ -72,11 +73,12 @@ before(() => {
   localStoragePolyfill.removeItem("probe");
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   memory.clear();
+  await resetBodyStorage();
 });
 
-test("v0 gloss-storage (oldest real shape) keeps articles and the initial anonymous stamp", async () => {
+test("v0 gloss-storage (real phase-1 shape) keeps articles and the initial anonymous stamp", async () => {
   // No `version` key: the persist middleware's `if (typeof ... === "number"
   // && ... !== options.version)` guard is false, so migrate is not called.
   // The default `merge` (`{...current, ...persisted}`) preserves the
@@ -131,7 +133,8 @@ test("v1 gloss-storage triggers migrate, stamps the owner, and rewrites to v2", 
   assert.equal(state.notes["n1"]?.answer, "A", "migrate must not drop notes");
   // Migrate writes the new state and bumps the version.
   const persisted = JSON.parse(memory.get("gloss-storage")!) as { version: number; state: { ownerUserId: string } };
-  assert.equal(persisted.version, 2);
+  // 3 is the version that moved article bodies out of this blob.
+  assert.equal(persisted.version, 3);
   assert.equal(persisted.state.ownerUserId, "anonymous");
 });
 
@@ -185,9 +188,10 @@ test("a v2 payload with a real owner is left untouched", async () => {
   const state = useStore.getState();
   assert.equal(state.ownerUserId, "user-42", "v2 owner must not be reset");
   assert.equal(state.articles["a2"]?.title, "用户42的文章");
-  // The blob's version is preserved.
+  // The blob is rewritten at the current version — an old version number here
+  // would mean the next load ran the migration again.
   const persisted = JSON.parse(memory.get("gloss-storage")!) as { version: number };
-  assert.equal(persisted.version, 2);
+  assert.equal(persisted.version, 3);
 });
 
 test("clearStorage wipes the local copy and resets to the initial state", async () => {
@@ -217,4 +221,127 @@ test("clearStorage wipes the local copy and resets to the initial state", async 
   assert.deepEqual(state.articles, {});
   assert.deepEqual(state.notes, {});
   assert.equal(state.currentArticleId, null);
+});
+
+// ── The body migration (2 → 3) ────────────────────────────────────────────
+//
+// Before this, `gloss-storage` held every article *with* its paragraphs, plus a
+// second copy of the same text in `syncDocument` for anything that had been
+// through the extractor. Both move to IndexedDB. What these gates pin is that
+// the move is lossless, that it survives being interrupted, and that the blob
+// really does shrink — the last one being the entire point, since the ceiling
+// this exists to escape is a property of the blob.
+
+const { migrateBodiesToIdb, WORKSPACE_KEY, STORAGE_VERSION, resumePendingBodyDeletes } = await import(
+  "../../src/lib/storage/migrate.js"
+);
+const { readBody, writeBody, makeBody, listBodyIds } = await import("../../src/lib/storage/bodies.js");
+const { recordBodyDeletes, pendingBodyDeletes } = await import("../../src/lib/storage/journal.js");
+const { sha256Hex } = await import("../../src/lib/local-import-blocks.js");
+
+function seedV2(article: Record<string, unknown>): void {
+  memory.set(
+    WORKSPACE_KEY,
+    JSON.stringify({
+      state: { ownerUserId: "anonymous", currentArticleId: null, articles: { a1: article }, notes: {} },
+      version: 2,
+    }),
+  );
+}
+
+function readBlobArticle(): Record<string, unknown> {
+  const blob = JSON.parse(memory.get(WORKSPACE_KEY)!) as {
+    version: number;
+    state: { articles: Record<string, Record<string, unknown>> };
+  };
+  assert.equal(blob.version, STORAGE_VERSION);
+  return blob.state.articles["a1"]!;
+}
+
+test("a v2 blob's article text moves to IndexedDB and the blob shrinks", async () => {
+  seedV2({ id: "a1", title: "书", paragraphs: [{ index: 1, text: "正文内容", hash: "h" }], createdAt: 1 });
+
+  assert.equal(await migrateBodiesToIdb(), 1);
+
+  const body = await readBody("a1");
+  assert.deepEqual(body?.paragraphs, [{ index: 1, text: "正文内容", hash: "h" }]);
+
+  const record = readBlobArticle();
+  assert.equal("paragraphs" in record, false, "the text must leave the blob");
+  assert.equal(record["title"], "书");
+  assert.deepEqual(record["bodyStats"], { paragraphs: 1, chars: 4 });
+});
+
+test("the body migration is idempotent — a second run moves nothing and loses nothing", async () => {
+  seedV2({ id: "a1", title: "书", paragraphs: [{ index: 1, text: "正文内容", hash: "h" }], createdAt: 1 });
+  assert.equal(await migrateBodiesToIdb(), 1);
+  // A tab that closed between "bodies written" and "blob rewritten" re-runs the
+  // whole thing; a tab that closed after both re-runs and finds nothing.
+  assert.equal(await migrateBodiesToIdb(), 0);
+  assert.deepEqual((await readBody("a1"))?.paragraphs, [{ index: 1, text: "正文内容", hash: "h" }]);
+});
+
+test("syncDocument is dropped, and its blocks become the record's digest", async () => {
+  const blocks = [{ id: "b1-aaaaaaaa", index: 1, type: "paragraph", text: "正文", hash: sha256Hex("正文") }];
+  seedV2({
+    id: "a1",
+    title: "书",
+    paragraphs: [{ index: 1, text: "正文", hash: sha256Hex("正文").slice(0, 12) }],
+    syncDocument: { title: "书", blocks, source: "markdown-remark", extractorVersion: "phase1.2", textHash: "t" },
+    createdAt: 1,
+  });
+
+  await migrateBodiesToIdb();
+
+  const record = readBlobArticle();
+  assert.equal("syncDocument" in record, false, "the second copy of the text must go");
+  assert.equal(record["blocksDigest"], sha256Hex(JSON.stringify(blocks)));
+
+  // The paragraph hash was stored truncated, which the sync route would reject;
+  // it is restored to the full digest, verified against the text it describes.
+  const body = await readBody("a1");
+  assert.equal(body?.paragraphs[0]?.hash, sha256Hex("正文"));
+});
+
+test("a hash that does not describe its text is left alone rather than guessed at", async () => {
+  // A legacy import whose hash came from a different scheme. Recomputing it
+  // would replace one value with another; leaving it means the article simply
+  // cannot be uploaded, which is the conservative branch.
+  seedV2({ id: "a1", title: "旧", paragraphs: [{ index: 1, text: "正文", hash: "legacyhash" }], createdAt: 1 });
+  await migrateBodiesToIdb();
+  assert.equal((await readBody("a1"))?.paragraphs[0]?.hash, "legacyhash");
+});
+
+test("a blob that is not valid JSON is left exactly as it was", async () => {
+  memory.set(WORKSPACE_KEY, "{not json");
+  assert.equal(await migrateBodiesToIdb(), 0);
+  assert.equal(memory.get(WORKSPACE_KEY), "{not json");
+});
+
+test("a deletion a previous run started is finished at startup", async () => {
+  // What a crash between "clear the cache" and "delete the bodies" leaves.
+  await writeBody(makeBody("a1", [{ index: 1, text: "私密正文", hash: "h" }]));
+  recordBodyDeletes(["a1"]);
+  assert.deepEqual(pendingBodyDeletes(), ["a1"]);
+
+  assert.equal(await resumePendingBodyDeletes(), 1);
+
+  assert.deepEqual(await listBodyIds(), [], "the text must not outlive the sign-out");
+  assert.deepEqual(pendingBodyDeletes(), [], "and the journal must not keep asking");
+});
+
+test("a record with no text migrates to a zero-size body, not to a failure", async () => {
+  // A record with no text is the state this whole change makes possible, so the
+  // migration has to pass over it without inventing one. Nothing to move means
+  // the pre-pass has nothing to do and returns early — the record is normalised
+  // by the merge on hydration instead, which is where a record that never had a
+  // body gets its `bodyStats`.
+  seedV2({ id: "a1", title: "无正文", createdAt: 1 });
+  assert.equal(await migrateBodiesToIdb(), 0);
+  assert.equal(memory.get(WORKSPACE_KEY)!.includes("bodyStats"), false);
+
+  const { useStore } = await import("../../src/lib/store.js");
+  await useStore.persist.rehydrate();
+  assert.deepEqual(useStore.getState().articles["a1"]?.bodyStats, { paragraphs: 0, chars: 0 });
+  assert.equal(useStore.getState().bodies["a1"], undefined);
 });

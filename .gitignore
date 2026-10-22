@@ -8,6 +8,10 @@ dist
 dist-ssr
 *.local
 
+# pdf.js data tables, staged out of node_modules by scripts/pdfjs-assets.mjs.
+# Build inputs pinned to a dependency version, not source.
+public/pdfjs/
+
 # editor
 .vscode/*
 !.vscode/extensions.json
@@ -20,8 +24,9 @@ dist-ssr
 *.sw?
 
 # env
-.env*
-!.env.example
+.env
+.env.local
+.env.*.local
 
 # logs
 npm-debug.log*
@@ -32,15 +37,15 @@ pnpm-debug.log*
 # OS
 Thumbs.db
 
-# Generated build and test output.
-#
-# Everything a verification run writes lands here: the acceptance and browser
-# suites' logs, screenshots and fixtures, the synthetic Chromium profile, and
-# the local TLS fixtures the URL-importer tests generate. Set `EVIDENCE_DIR` to
-# write a run's evidence somewhere else (see `scripts/evidence-dir.mjs`); this
-# entry keeps the default location out of version control.
+# Phase 1 reproducible tools, generated Prisma client and acceptance output
+.tools/
+server/src/generated/
+server/dist/
 artifacts/
 
-# Written by `apps/reader-release/build.mjs` beside the bundle it describes:
-# the file list and content hash of the offline shell it just emitted.
+# Per-worktree synthetic browser profiles and generated release metadata
+apps/reader-release/.free-profile/
 apps/reader-release/build-manifest.json
+
+# Gate evidence. Local runs write it here; it is not part of the source tree.
+docs/evidence/

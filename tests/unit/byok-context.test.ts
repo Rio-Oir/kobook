@@ -16,7 +16,7 @@
 
 import assert from "node:assert/strict";
 import { test, before, beforeEach, after } from "node:test";
-import type { Article } from "../../src/lib/types.js";
+import type { Article, Paragraph } from "../../src/lib/types.js";
 import {
   DONE_FRAME,
   chunkFrame,
@@ -49,15 +49,38 @@ beforeEach(() => {
   settings.useSettings.getState().reset();
 });
 
-function makeArticle(texts: string[] = ["第一段。", "第二段。", "第三段。"]): Article {
+/**
+ * A record and its text.
+ *
+ * Returned together because every gate in this file needs both and they are no
+ * longer the same object: the record is the article, the text is a body. A
+ * helper that returned only the record would have every call site invent its
+ * own paragraphs.
+ */
+function makeArticle(texts: string[] = ["第一段。", "第二段。", "第三段。"]): {
+  article: Article;
+  paragraphs: Paragraph[];
+} {
+  const paragraphs: Paragraph[] = texts.map((text, i) => ({ index: i + 1, text, hash: `h${i + 1}` }));
   return {
-    id: "a-test",
-    url: "https://example.com/post",
-    title: "测试文章",
-    author: "作者",
-    paragraphs: texts.map((text, i) => ({ index: i + 1, text, hash: `h${i + 1}` })),
-    createdAt: 1,
+    article: {
+      id: "a-test",
+      url: "https://example.com/post",
+      title: "测试文章",
+      author: "作者",
+      createdAt: 1,
+      bodyStats: {
+        paragraphs: paragraphs.length,
+        chars: paragraphs.reduce((total, p) => total + p.text.length, 0),
+      },
+    },
+    paragraphs,
   };
+}
+
+/** The two halves, spread into a call that takes them positionally. */
+function spreadFixture(fixture: { article: Article; paragraphs: Paragraph[] }): [Article, Paragraph[]] {
+  return [fixture.article, fixture.paragraphs];
 }
 
 function configure(baseURL: string, apiKey = "sk-fake-byok"): void {
@@ -92,8 +115,8 @@ after(async () => {
 // ── context construction ──────────────────────────────────────────────────
 
 test("the system context keeps the document separate from the instructions", () => {
-  const article = makeArticle();
-  const ctx = context.buildStableContext(article);
+  const { article, paragraphs } = makeArticle();
+  const ctx = context.buildStableContext(article, paragraphs);
 
   assert.match(ctx, /<document>/);
   assert.match(ctx, /\[¶1\] 第一段。/);
@@ -106,13 +129,13 @@ test("the system context keeps the document separate from the instructions", () 
 
 test("a long document is clamped instead of being sent whole", () => {
   const huge = "长".repeat(300_000);
-  const article = makeArticle([huge]);
-  const ctx = context.buildStableContext(article);
+  const { article, paragraphs } = makeArticle([huge]);
+  const ctx = context.buildStableContext(article, paragraphs);
   assert.ok(ctx.length < 200_000, "the prompt must stay bounded; got " + ctx.length);
   assert.match(ctx, /\[内容已截断\]/);
 
   // The brief context used to skip the clamp entirely.
-  const briefCtx = context.buildBriefSystemContext(article);
+  const briefCtx = context.buildBriefSystemContext(article, paragraphs);
   assert.ok(briefCtx.length < 200_000, "the brief prompt must be bounded too");
   assert.match(briefCtx, /\[内容已截断\]/);
 });
@@ -137,14 +160,14 @@ test("a follow-up keeps the original question as its own message", () => {
 });
 
 test("paragraph references are validated against the article, including ranges", () => {
-  const article = makeArticle();
-  assert.equal(context.findInvalidParagraphRef("见 ¶1 与 ¶2-3", article), null);
-  assert.match(context.findInvalidParagraphRef("见 ¶9", article) ?? "", /不存在/);
-  assert.match(context.findInvalidParagraphRef("见 ¶2-9", article) ?? "", /不存在/);
-  assert.match(context.findInvalidParagraphRef("见 ¶3-1", article) ?? "", /起点大于终点/);
-  assert.equal(context.validateParagraphRefs("见 ¶1", article), true);
-  assert.equal(context.validateParagraphRefs("见 ¶0", article), false);
-  assert.equal(context.validateParagraphRefs("没有引用", article), true);
+  const { paragraphs } = makeArticle();
+  assert.equal(context.findInvalidParagraphRef("见 ¶1 与 ¶2-3", paragraphs), null);
+  assert.match(context.findInvalidParagraphRef("见 ¶9", paragraphs) ?? "", /不存在/);
+  assert.match(context.findInvalidParagraphRef("见 ¶2-9", paragraphs) ?? "", /不存在/);
+  assert.match(context.findInvalidParagraphRef("见 ¶3-1", paragraphs) ?? "", /起点大于终点/);
+  assert.equal(context.validateParagraphRefs("见 ¶1", paragraphs), true);
+  assert.equal(context.validateParagraphRefs("见 ¶0", paragraphs), false);
+  assert.equal(context.validateParagraphRefs("没有引用", paragraphs), true);
 });
 
 // ── brief parsing ─────────────────────────────────────────────────────────
@@ -161,13 +184,13 @@ const goodBrief = {
 };
 
 test("parseBrief accepts fenced JSON and rejects everything that is not a brief", () => {
-  const article = makeArticle();
-  const parsed = briefModule.parseBrief("```json\n" + JSON.stringify(goodBrief) + "\n```", article);
+  const { paragraphs } = makeArticle();
+  const parsed = briefModule.parseBrief("```json\n" + JSON.stringify(goodBrief) + "\n```", paragraphs);
   assert.equal(parsed.claims.length, 5);
 
-  assert.throws(() => briefModule.parseBrief("不是 JSON", article), /不是有效 JSON/);
+  assert.throws(() => briefModule.parseBrief("不是 JSON", paragraphs), /不是有效 JSON/);
   assert.throws(
-    () => briefModule.parseBrief(JSON.stringify({ gist: "x", claims: [] }), article),
+    () => briefModule.parseBrief(JSON.stringify({ gist: "x", claims: [] }), paragraphs),
     /格式不正确/,
   );
   assert.throws(
@@ -177,12 +200,12 @@ test("parseBrief accepts fenced JSON and rejects everything that is not a brief"
           ...goodBrief,
           claims: goodBrief.claims.map((c, i) => (i === 0 ? { ...c, paragraphRef: "¶99" } : c)),
         }),
-        article,
+        paragraphs,
       ),
     /无效的段落引用/,
   );
   assert.throws(
-    () => briefModule.parseBrief(JSON.stringify({ ...goodBrief, gist: "见 ¶42" }), article),
+    () => briefModule.parseBrief(JSON.stringify({ ...goodBrief, gist: "见 ¶42" }), paragraphs),
     /无效的段落引用/,
   );
 });
@@ -193,9 +216,9 @@ test("the brief rides streamChat: one request, bounded prompt, parsed result", a
   const p = await provider([{ frames: oneShotFrames(JSON.stringify(goodBrief)) }]);
   configure(p.baseURL);
 
-  const article = makeArticle();
+  const { article, paragraphs } = makeArticle();
   let lastProgress = "";
-  const brief = await briefModule.generateBrief(article, (raw) => {
+  const brief = await briefModule.generateBrief(article, paragraphs, (raw) => {
     lastProgress = raw;
   });
 
@@ -223,7 +246,7 @@ test("a provider error frame rejects the brief instead of blaming the JSON", asy
   configure(p.baseURL);
 
   await assert.rejects(
-    () => briefModule.generateBrief(makeArticle()),
+    () => briefModule.generateBrief(...spreadFixture(makeArticle())),
     (err: Error) => {
       assert.match(err.message, /上游 502/);
       assert.doesNotMatch(err.message, /不是有效 JSON/, "a transport failure is not a format problem");
@@ -235,7 +258,7 @@ test("a provider error frame rejects the brief instead of blaming the JSON", asy
 test("an empty brief response is rejected", async () => {
   const p = await provider([{ frames: [chunkFrame({ role: "assistant" }), finishFrame(), DONE_FRAME] }]);
   configure(p.baseURL);
-  await assert.rejects(() => briefModule.generateBrief(makeArticle()), /空响应/);
+  await assert.rejects(() => briefModule.generateBrief(...spreadFixture(makeArticle())), /空响应/);
 });
 
 test("a cancelled brief rejects and keeps its partial text out of the result", async () => {
@@ -245,14 +268,14 @@ test("a cancelled brief rejects and keeps its partial text out of the result", a
   configure(p.baseURL);
 
   const controller = new AbortController();
-  const run = briefModule.generateBrief(makeArticle(), undefined, { signal: controller.signal });
+  const run = briefModule.generateBrief(...spreadFixture(makeArticle()), undefined, { signal: controller.signal });
   setTimeout(() => controller.abort(), 60);
   await assert.rejects(() => run, /取消/);
 });
 
 test("with no key the brief is a clearly-labelled local demo, not a model answer", async () => {
   const p = await provider([{ frames: oneShotFrames(JSON.stringify(goodBrief)) }]);
-  const brief = await briefModule.generateBrief(makeArticle());
+  const brief = await briefModule.generateBrief(...spreadFixture(makeArticle()));
   assert.match(brief.gist, /演示摘要/);
   assert.equal(p.requests.length, 0, "the demo path must not call any provider");
 });

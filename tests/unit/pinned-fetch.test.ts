@@ -7,12 +7,11 @@
  * Pinned fetching: TLS identity, per-hop SSRF re-gating, size and time
  * bounds.
  *
- * This is the file that pins the fix for a silent bug: when an HTTPS fetch
- * is pinned to an already-resolved IP, the original hostname must still be
- * what SNI and the certificate check use, and TLS verification must never be
- * switched off to make that work.
+ * This is the file that pins the phase-3 fix for
  *
- * The bug was silent, which is why the assertions here are
+ *   "修 HTTPS 抓取锁定 IP 时的原域名 SNI/证书校验（不得关闭 TLS 校验）"
+ *
+ * The bug it replaces was silent, which is why the assertions here are
  * about *identity* rather than about "the request succeeded". Pinning a
  * connection by rewriting the URL's hostname to an IP means the TLS
  * handshake carries SNI = the IP and the certificate is checked against

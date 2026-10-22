@@ -6,14 +6,16 @@
 /**
  * Article library — unit tests for the URL importer's surface.
  *
- * This file pins the parts of the URL importer's surface that are testable
- * without a live upstream: the SSRF gate being wired into `importFromUrl`,
- * the `NOT_IMPLEMENTED` 501 shape, and the `ContentBlock` round-trip helpers.
+ * The article routes themselves need a real session + a real Prisma;
+ * that coverage lives in `tests/phase3.ts` and `tests/browser-articles.mjs`.
+ * This file pins the bits that are testable without those: the SSRF
+ * gate being wired into `importFromUrl`, the `NOT_IMPLEMENTED` 501
+ * shape, and the `ContentBlock` round-trip helpers.
  *
- * The gate for these tests is "the importer refuses the dangerous URL before
- * it can ever reach `fetch`". The address rules themselves are covered by
- * `tests/unit/ssrf-guard.test.ts`, and the positive round trip against a real
- * upstream by `apps/reader-release/tests/server-inject.mjs`.
+ * The gate for these tests is "the importer refuses the dangerous URL
+ * before it can ever reach `fetch`" — the actual network paths are
+ * covered by `tests/unit/ssrf-guard.test.ts` (the rules) and the
+ * integration test (the round trip against a real Postgres).
  */
 
 import assert from "node:assert/strict";
@@ -58,9 +60,10 @@ test("importFromUrl refuses file://, gopher://, javascript:, and data: URLs", as
 });
 
 test("UrlImportNotReadyError is preserved for callers that want the 501 mapping", () => {
-  // The class is no longer thrown by `importFromUrl`, but callers may still
-  // reference it. Pin the shape so a silent rename of the property surfaces
-  // here.
+  // The class is no longer thrown by `importFromUrl` (slice 2 wired the
+  // real path), but the import route and any future feature-flag
+  // fallback still reference it. Pin the shape so a silent rename of
+  // the property surfaces here.
   const err = new UrlImportNotReadyError();
   assert.equal(err.statusCode, 501);
   assert.match(err.message, /粘贴正文/);

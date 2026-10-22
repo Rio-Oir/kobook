@@ -14,6 +14,7 @@
 import assert from "node:assert/strict";
 import { test, beforeEach, after } from "node:test";
 import { installLocalStorage } from "./byok-fake-provider.js";
+import { resetBodyStorage } from "./storage-fixture.js";
 
 const memory = installLocalStorage();
 
@@ -21,6 +22,7 @@ const { LEGACY_STORAGE_KEY, downloadLegacyRaw, importLegacyIntoStore, readLegacy
   "../../src/lib/legacy-local-free.js"
 );
 const { useStore } = await import("../../src/lib/store.js");
+const { readBody } = await import("../../src/lib/storage/bodies.js");
 
 function legacyBlob(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify({
@@ -59,52 +61,53 @@ function legacyBlob(overrides: Record<string, unknown> = {}): string {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   memory.clear();
   useStore.getState().clearUserCache();
+  await resetBodyStorage();
 });
 
 after(() => {
   useStore.getState().clearUserCache();
 });
 
-test("legacy: an absent key is reported as absent and offers nothing", () => {
+test("legacy: an absent key is reported as absent and offers nothing", async () => {
   const summary = readLegacySummary();
   assert.equal(summary.present, false);
   assert.equal(summary.articles, 0);
-  const result = importLegacyIntoStore();
+  const result = await importLegacyIntoStore();
   assert.equal(result.ok, false);
   assert.match(result.message, /没有检测到/);
 });
 
-test("legacy: an unreadable blob is reported, and never treated as empty-but-fine", () => {
+test("legacy: an unreadable blob is reported, and never treated as empty-but-fine", async () => {
   memory.set(LEGACY_STORAGE_KEY, "{not json");
   const summary = readLegacySummary();
   assert.equal(summary.present, true);
   assert.ok(summary.unreadable);
-  assert.equal(importLegacyIntoStore().ok, false);
+  assert.equal((await importLegacyIntoStore()).ok, false);
 });
 
-test("legacy: an unknown schemaVersion is refused rather than guessed at", () => {
+test("legacy: an unknown schemaVersion is refused rather than guessed at", async () => {
   memory.set(LEGACY_STORAGE_KEY, legacyBlob({ schemaVersion: 99 }));
   const summary = readLegacySummary();
   assert.equal(summary.present, true);
   assert.match(String(summary.unreadable), /schemaVersion=99/);
-  assert.equal(importLegacyIntoStore().ok, false);
+  assert.equal((await importLegacyIntoStore()).ok, false);
 });
 
-test("legacy: a highlight whose quote does not match its anchor makes the whole blob unreadable", () => {
+test("legacy: a highlight whose quote does not match its anchor makes the whole blob unreadable", async () => {
   const blob = JSON.parse(legacyBlob());
   blob.highlights["hl-legacy-1"].selectionText = "完全对不上的文字";
   memory.set(LEGACY_STORAGE_KEY, JSON.stringify(blob));
   const summary = readLegacySummary();
   assert.ok(summary.unreadable);
   const before = useStore.getState().articles;
-  assert.equal(importLegacyIntoStore().ok, false);
+  assert.equal((await importLegacyIntoStore()).ok, false);
   assert.equal(useStore.getState().articles, before, "a refused import must not touch the store");
 });
 
-test("legacy: a valid import lands articles, anchors and a labelled note, and leaves the old key alone", () => {
+test("legacy: a valid import lands articles, anchors and a labelled note, and leaves the old key alone", async () => {
   const blob = legacyBlob();
   memory.set(LEGACY_STORAGE_KEY, blob);
 
@@ -115,7 +118,7 @@ test("legacy: a valid import lands articles, anchors and a labelled note, and le
   assert.equal(summary.notes, 1);
   assert.ok(summary.bytes > 0);
 
-  const result = importLegacyIntoStore();
+  const result = await importLegacyIntoStore();
   assert.equal(result.ok, true);
   assert.equal(result.articles, 1);
   assert.equal(result.highlights, 1);
@@ -125,7 +128,9 @@ test("legacy: a valid import lands articles, anchors and a labelled note, and le
   const article = state.articles["local-abc123"];
   assert.ok(article, "the legacy article must be imported under its original id");
   assert.equal(article.title, "旧版文章标题");
-  assert.equal(article.paragraphs.length, 2);
+  // The text is a body now, not a field on the record.
+  assert.equal((await readBody("local-abc123"))?.paragraphs.length, 2);
+  assert.deepEqual(article.bodyStats, { paragraphs: 2, chars: 10 });
   // The legacy id and the original timestamp survive, so the user's timeline
   // does not silently reorder.
   const highlight = state.highlights["hl-legacy-1"];
@@ -142,15 +147,15 @@ test("legacy: a valid import lands articles, anchors and a labelled note, and le
   assert.equal(memory.get(LEGACY_STORAGE_KEY), blob, "the old space must be byte-identical after an import");
 });
 
-test("legacy: importing the same blob twice is idempotent", () => {
+test("legacy: importing the same blob twice is idempotent", async () => {
   memory.set(LEGACY_STORAGE_KEY, legacyBlob());
-  assert.equal(importLegacyIntoStore().ok, true);
+  assert.equal((await importLegacyIntoStore()).ok, true);
   const first = useStore.getState();
   const firstArticles = Object.keys(first.articles).length;
   const firstHighlights = Object.keys(first.highlights).length;
   const firstNotes = Object.keys(first.notes).length;
 
-  const second = importLegacyIntoStore();
+  const second = await importLegacyIntoStore();
   assert.equal(second.ok, true);
   assert.equal(second.notes, 0, "the second import must not add a second copy of the note");
 
@@ -160,21 +165,19 @@ test("legacy: importing the same blob twice is idempotent", () => {
   assert.equal(Object.keys(after.notes).length, firstNotes);
 });
 
-test("legacy: importing does not clear what the new space already holds", () => {
+test("legacy: importing does not clear what the new space already holds", async () => {
   memory.set(LEGACY_STORAGE_KEY, legacyBlob());
-  useStore.getState().saveArticle({
-    id: "local-existing",
-    title: "新版文章",
-    paragraphs: [{ index: 1, text: "新版第一段", hash: "newhash01" }],
-    createdAt: 5000,
-  });
-  assert.equal(importLegacyIntoStore().ok, true);
+  await useStore.getState().saveArticle(
+    { id: "local-existing", title: "新版文章", createdAt: 5000 },
+    [{ index: 1, text: "新版第一段", hash: "newhash01" }],
+  );
+  assert.equal((await importLegacyIntoStore()).ok, true);
   const state = useStore.getState();
   assert.ok(state.articles["local-existing"], "the pre-existing article must survive the import");
   assert.ok(state.articles["local-abc123"], "and the legacy article must be added alongside it");
 });
 
-test("legacy: the raw download returns the untouched bytes", () => {
+test("legacy: the raw download returns the untouched bytes", async () => {
   const blob = legacyBlob();
   memory.set(LEGACY_STORAGE_KEY, blob);
   // No DOM in this runner, so the download reports its inability rather than
@@ -188,12 +191,17 @@ test("legacy: the raw download returns the untouched bytes", () => {
   assert.equal(memory.get(LEGACY_STORAGE_KEY), blob);
 });
 
-test('a legacy article collision refuses before overwriting current content', () => {
+test('a legacy article collision refuses before overwriting current content', async () => {
   localStorage.setItem(LEGACY_STORAGE_KEY, legacyBlob());
-  assert.equal(importLegacyIntoStore().ok, true);
+  assert.equal((await importLegacyIntoStore()).ok, true);
   const existing = useStore.getState().articles['local-abc123']!;
-  useStore.getState().saveArticle({...existing, paragraphs: [{...existing.paragraphs[0]!, text: '更新后的正文'}]});
+  const existingParagraph = (await readBody(existing.id))!.paragraphs[0]!;
+  await useStore.getState().saveArticle(
+    { id: existing.id, title: existing.title, createdAt: existing.createdAt },
+    [{ ...existingParagraph, text: '更新后的正文' }],
+  );
   const before = JSON.stringify(useStore.getState().articles);
-  assert.equal(importLegacyIntoStore().ok, false);
+  assert.equal((await importLegacyIntoStore()).ok, false);
   assert.equal(JSON.stringify(useStore.getState().articles), before);
 });
+

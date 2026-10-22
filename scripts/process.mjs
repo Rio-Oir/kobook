@@ -13,5 +13,5 @@ export function run(command, args, options = {}) {
     child.on('exit', code => code === 0 ? resolve() : reject(new Error(`${command} exited ${code}`)));
   });
 }
-// A database schema runner used to live here; it left with the database. This
-// service has no schema to generate and no client to migrate.
+// The `prisma` runner that used to live here went with the database: the base
+// line has no schema to generate and no client to migrate.

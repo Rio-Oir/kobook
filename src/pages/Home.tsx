@@ -15,56 +15,85 @@ import {
   importFromText,
   importFromUrlDual,
 } from "@/lib/browser-extract";
-import { MAX_LOCAL_INPUT_BYTES } from "@/lib/local-import";
+import { importFromFile } from "@/lib/import";
+import { classifyImportInput } from "@/lib/import-input";
 import { enqueueArticleSync } from "@/lib/cloud/bridge";
+import { ensureArticleTags } from "@/lib/tagging";
+import TopBarMenu from "@/components/TopBarMenu";
 import { currentSessionEpoch } from "@/lib/session-epoch";
 import type { ExtractSource } from "@/lib/browser-extract-errors";
 import type { ParsedDocument } from "@/lib/types";
-import SettingsPanel from "@/components/SettingsPanel";
-import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const saveArticle = useStore((s) => s.saveArticle);
   const modelInfo = useModelInfo();
 
   const [rawText, setRawText] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /**
+   * Guards a second file import while one is in flight.
+   *
+   * `loading` is React state, so two events in the same tick would both read
+   * the value from the current render and both get through. A 50 MB PDF takes
+   * long enough for a double-drop to be an ordinary accident, and the cost is
+   * a duplicated article plus two full parses, so the guard is a ref.
+   */
+  const fileBusyRef = useRef(false);
 
   /**
-   * Import a local `.txt` / `.md` file.
+   * Import a local file: PDF, EPUB, DOCX, HTML, Markdown or plain text.
    *
-   * Reuses the same `importFromText` parser as the paste box (no second
-   * parser to keep in step) and the same `saveAndOpen` write path, so a
-   * file import and a paste produce identical articles, identical
-   * `local-<textHash>` keys and identical duplicate handling. The file
-   * never leaves the machine: `File.text()` is a local read.
+   * The format is decided by `sniffFormat` from the bytes, not from the name —
+   * a `.txt` that is really HTML is read as HTML, and a PDF is recognised
+   * however it is named. The name is only consulted when the bytes are
+   * inconclusive, and only ever as a *fallback* title: a book carries its own
+   * (the EPUB's OPF, the PDF's first heading, the document's `<title>`), and
+   * the name on disk is frequently a catalogue number.
+   *
+   * Two things this deliberately does *not* do any more, both of which were
+   * bugs rather than simplifications:
+   *
+   *  - It does not gate on the extension. The old whitelist was
+   *    `.md|.markdown|.txt`, which refused every PDF before it was ever read.
+   *  - It does not gate on `file.size` against the paste ceiling. A PDF is
+   *    routinely 5–50 MB while its text layer is a few hundred KB, so a single
+   *    byte budget reports the wrong reason for refusing. The importer carries
+   *    two separate ceilings — `MAX_FILE_BYTES` on the container and
+   *    `MAX_TEXT_BYTES` on the extracted text — and checks the container's
+   *    against `file.size` first so an oversized file is refused without being
+   *    read.
+   *
+   * Failure is a value, not an exception, and each code already carries a
+   * message written for this surface, so there is no code→string table here to
+   * drift out of step with the importer.
+   *
+   * A successful import does *not* announce the encoding it guessed, even
+   * though `FileImportSuccess` reports it. The only surface that could say so
+   * is this page, and `saveAndOpen` navigates away from it in the same tick —
+   * a notice set here is never painted. Saying it in the reader instead would
+   * mean persisting an encoding on the article, which turns a one-off advisory
+   * about one import into a permanent label on every future open.
    */
   async function handleFile(file: File) {
-    if (loading) return;
+    if (fileBusyRef.current) return;
+    fileBusyRef.current = true;
     setError(null);
-    if (!/\.(md|markdown|txt)$/i.test(file.name)) {
-      setError("请拖入 Markdown 或 TXT 文件。");
-      return;
-    }
-    if (file.size > MAX_LOCAL_INPUT_BYTES) {
-      setError(`文件超过 ${Math.round(MAX_LOCAL_INPUT_BYTES / 1024 / 1024)} MB 上限。`);
-      return;
-    }
+    setLoading(true);
     try {
-      const text = await file.text();
-      const title = file.name.replace(/\.(md|markdown|txt)$/i, "");
-      const local = importFromText(text, { title });
-      if (!local.ok) {
-        setError(local.message);
+      const result = await importFromFile(file);
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
-      saveAndOpen(local.document, "local", undefined, captureSubmitIdentity());
+      await saveAndOpen(result.document, "local", undefined, captureSubmitIdentity());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      fileBusyRef.current = false;
+      setLoading(false);
     }
   }
 
@@ -145,34 +174,44 @@ export default function Home() {
    *      id wins: the store's `setArticleRemote` no-ops when an
    *      article already carries a `remoteId`.
    */
-  function saveAndOpen(
+  async function saveAndOpen(
     document: ParsedDocument,
     source: ExtractSource,
     sourceUrl: string | undefined,
     submitIdentity: { ownerUserId: string; epoch: number } | null,
-  ): void {
-    const local = anonymousDocumentToLocalArticle(document);
-    local.syncDocument = document;
-    local.syncSource = source;
+  ): Promise<void> {
+    const { article, paragraphs } = anonymousDocumentToLocalArticle(document);
+    article.syncSource = source;
     // Keep identical imports and their note/version mapping intact;
     // a formatting-only change (same textHash, different blocks) takes
     // a distinct local key so the previous article keeps its notes and
     // its cloud binding. The rule lives in `localArticleKeyFor` so it
     // is unit-testable without driving the page.
-    const existing = useStore.getState().articles[local.id];
-    local.id = localArticleKeyFor(document, existing);
-    if (existing && local.id === existing.id) {
+    const existing = useStore.getState().articles[article.id];
+    article.id = localArticleKeyFor(document, existing);
+    if (existing && article.id === existing.id) {
       // Same key and same blocks: this is a re-view of the same
       // article, so keep the row it already has (including any
       // `remoteId`, notes and highlights anchored to it) rather than
       // replacing it with a fresh `createdAt`.
-      Object.assign(local, existing);
+      Object.assign(article, existing);
     }
-    if (sourceUrl) local.url = sourceUrl;
-    saveArticle(local);
-    window.location.hash = `#/r/${local.id}`;
-    if (submitIdentity) {
-      enqueueArticleSync(local, document, source, {
+    if (sourceUrl) article.url = sourceUrl;
+    // Awaited, so a body the disk refused is reported here rather than
+    // discovered by the reader after a refresh. The record and the in-memory
+    // body are installed synchronously inside `saveArticle`, so navigating
+    // afterwards still finds the text.
+    await saveArticle(article, paragraphs);
+    const saved = useStore.getState().articles[article.id];
+    // Tags are a background enhancement, never part of the import: the call
+    // is not awaited, and `ensureArticleTags` itself skips silently when no
+    // key is configured or the body is not on disk. The Reader's on-open
+    // effect is the second trigger, which is what makes "import now, add the
+    // key later, tag on next read" work.
+    void ensureArticleTags(article.id).catch(() => undefined);
+    window.location.hash = `#/r/${article.id}`;
+    if (submitIdentity && saved) {
+      enqueueArticleSync(saved, document, source, {
         ownerUserId: submitIdentity.ownerUserId,
         epoch: submitIdentity.epoch,
       });
@@ -191,45 +230,50 @@ export default function Home() {
     const startedEpoch = currentSessionEpoch();
     const startedOwner = useSession.getState().user?.id ?? null;
     try {
-      const link = rawText.match(/https?:\/\/[^\s<>"“”]+/i)?.[0];
-      if (link) {
-        const normalized = link.replace(/[，。；！？、）\])]+$/u, "");
-        if (!/^https?:\/\//.test(normalized)) {
-          throw new Error("请输入 http(s) 链接。");
-        }
-        const result = await importFromUrlDual(normalized, {
+      // Which half of the box this paste belongs to is a product rule with
+      // its own tests (`src/lib/import-input.ts`), not a regex to keep in
+      // step here. It answers three questions at once: is this one link,
+      // is it a link inside shared text, or is it article text — and it
+      // defaults the scheme for a bare `example.com/a` paste, which is what
+      // makes that affordance work instead of silently becoming a one-line
+      // article. A paste it calls text never reaches the network: the branch
+      // below is `importFromText`, which has no fetch in it at all.
+      const input = classifyImportInput(rawText);
+      if (input.kind === "url") {
+        // `input.url` is absolute by now; the extractor's own gate still
+        // decides whether it may be fetched (http(s) only, no credentials).
+        const result = await importFromUrlDual(input.url, {
           onFallback: (notice) => setError(notice.message),
         });
-        // Discard — do not "save it as anonymous instead". A change of owner
-        // or epoch (including anon → named) means the result belongs to a
-        // session that no longer exists: the sign-out already tore down that
-        // account's cache, so materialising the result now would quietly drop
-        // a fetched page into whatever space is current. Checked before the
-        // save, not just before the upload.
+        // 丢弃, 不是"改成不登录再保存". The rule is "URL owner+epoch
+        // 变化直接丢弃（包括 anon→named）": the sign-out already tore
+        // down the account's cache, so materialising the result now
+        // would quietly drop a fetched page into whatever space is
+        // current. Checked before the save, not just before the upload.
         if (startedEpoch !== currentSessionEpoch() || startedOwner !== (useSession.getState().user?.id ?? null)) return;
         if (result.ok) {
           // Second gate, for the upload only: a `null` identity is the
           // anonymous case, and an anonymous reader's import is saved
           // locally and never synced.
           const stillCurrent = identityStillCurrent(submitIdentity);
-          saveAndOpen(
+          await saveAndOpen(
             result.document,
             result.source,
-            normalized,
+            input.url,
             stillCurrent ? submitIdentity : null,
           );
         } else {
           setError(result.failure.message);
         }
       } else {
-        const trimmed = rawText.trim();
+        const trimmed = input.text;
         if (!trimmed) throw new Error("请粘贴文章正文");
         const local = importFromText(trimmed);
         if (!local.ok) {
           setError(local.message);
           return;
         }
-        saveAndOpen(local.document, "local", undefined, submitIdentity);
+        await saveAndOpen(local.document, "local", undefined, submitIdentity);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -239,15 +283,22 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+    // `justify-center` used to centre the hero *as a block*, which put the
+    // composer 13px below the viewport's centre line — the box is not the
+    // block's visual centre, so centring the block does not centre the box.
+    // `main` is `flex-1` in a box with symmetric padding, so its own centre
+    // line is the viewport's, and the grid below does the centring per row.
+    // The padding has to match on both sides or the centre line drifts.
+    <div className="min-h-screen flex flex-col px-6 pt-24 pb-24">
       {/* Top bar */}
       <header className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2 text-sm font-medium">
           <span className="text-gloss-accent">+</span>
-          <span>kobook</span>
-          <span className="text-gloss-textDim ml-3">·</span>
-          <span className="text-gloss-textDim ml-3">
-            {modelInfo.hasKey ? (
+          <span>KoBook</span>
+          {modelInfo.hasKey && (
+            <>
+              <span className="text-gloss-textDim ml-3">·</span>
+              <span className="text-gloss-textDim ml-3">
               <>
                 <span className="text-gloss-accent">♥</span>{" "}
                 <span className="text-gloss-textDim">{modelInfo.name}</span>
@@ -259,31 +310,26 @@ export default function Home() {
                   {modelInfo.endpointConfirmed ? "●" : "○"}
                 </span>
               </>
-            ) : (
-              <span className="text-gloss-textDim italic">演示模式</span>
-            )}
-          </span>
+              </span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-3">
-          {/* The local library is a core feature and is always reachable.
-              It belongs to whoever is reading, signed in or not: an
-              anonymous reader must be able to find the articles they saved,
-              so this link is never gated on a session. */}
+          {/* The local library is a base feature and is always reachable.
+              It used to be shown only to a signed-in reader or in the free
+              build, which meant an anonymous reader in the account build had
+              articles they could not find again. */}
           <a href="#/library" data-testid="library-link" className="text-sm text-gloss-textDim hover:text-gloss-text transition-colors">我的文章</a>
-          <ThemeToggle />
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="text-gloss-textDim hover:text-gloss-text p-1 text-base"
-            title="设置"
-          >
-            ⚙
-          </button>
+          <TopBarMenu showLibrary={false} />
         </div>
       </header>
 
-      {/* Hero */}
-      <main className="max-w-3xl w-full text-center animate-fade-in">
-        <h1 className="font-serif text-5xl md:text-6xl leading-[1.1] tracking-tight">
+      {/* Hero. `minmax(0,1fr)` rather than bare `1fr`: a bare fr row still has an
+          auto floor at its content's height, so a tall title and a short
+          intro would give the two rows different heights and push the middle
+          row off centre. `minmax(0,…)` makes them exactly equal at any size. */}
+      <main className="flex-1 w-full max-w-3xl mx-auto grid grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-y-12 text-center animate-fade-in">
+        <h1 className="self-end font-serif text-5xl md:text-6xl leading-[1.1] tracking-tight">
           选中一段文字，
           <br />
           <span className="inline-block px-2 bg-gloss-accent/15 border-b-2 border-gloss-accent">
@@ -291,12 +337,16 @@ export default function Home() {
           </span>
         </h1>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-12 flex flex-col items-center gap-4"
-        >
+        <div className="self-center flex flex-col items-center gap-4">
+          <form
+            onSubmit={handleSubmit}
+            className="w-full flex flex-col items-center"
+          >
+          {/* `max-w-[588.667px]` is sized backwards from the design
+              reference rather than picked from the scale: 574.667 of content
+              + 6 of padding on each side + the 1px border on each side. */}
           <div
-            className="w-full max-w-xl rounded-xl bg-gloss-surface border border-gloss-border focus-within:border-gloss-accent/50 transition-colors p-4"
+            className="gloss-import-composer flex items-center gap-2 w-full max-w-[588.667px] rounded-xl bg-gloss-surface border p-1.5"
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; }}
             onDrop={(e) => {
               e.preventDefault();
@@ -304,20 +354,10 @@ export default function Home() {
               if (file) void handleFile(file);
             }}
           >
-            <textarea
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              aria-label="文章链接或正文"
-              placeholder="粘贴文章链接，或直接粘贴正文…"
-              rows={5}
-              className="block w-full min-w-0 bg-transparent outline-none resize-y text-gloss-text placeholder:text-gloss-textDim"
-              required
-            />
-            <div className="mt-3 flex items-center justify-between gap-3">
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".md,.markdown,.txt,text/markdown,text/plain"
+                accept=".md,.markdown,.mdown,.txt,.text,.html,.htm,.xhtml,.epub,.docx,.pdf,text/markdown,text/plain,text/html,application/xhtml+xml,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   e.target.value = "";
@@ -330,33 +370,51 @@ export default function Home() {
                 type="button"
                 disabled={loading}
                 onClick={() => fileInputRef.current?.click()}
-                aria-label="导入 Markdown 或 TXT 文件"
-                title="拖入或选择 Markdown / TXT 文件"
-                className="p-2 rounded-lg text-gloss-textDim hover:text-gloss-text hover:bg-gloss-text/5 transition-colors disabled:opacity-40"
+                aria-label="导入 PDF、EPUB、DOCX、HTML、Markdown 或 TXT 文件"
+                title="拖入或选择 PDF / EPUB / DOCX / HTML / Markdown / TXT 文件"
+                className="shrink-0 p-2 rounded-lg text-gloss-textDim hover:text-gloss-text hover:bg-gloss-text/5 transition-colors disabled:opacity-40"
               >
                 <svg aria-hidden="true" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m8 12 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9" />
                 </svg>
               </button>
+              <textarea
+                value={rawText}
+                onChange={(e) => setRawText(e.target.value)}
+                aria-label="文章链接或正文"
+                placeholder="粘贴文章链接，或直接粘贴正文…"
+                rows={1}
+                className="block flex-1 min-w-0 h-12 py-3 bg-transparent outline-none resize-none text-gloss-text placeholder:text-gloss-textDim"
+                required
+              />
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 rounded-lg bg-gloss-text text-gloss-bg text-sm font-medium hover:bg-gloss-text/85 transition-colors disabled:opacity-40"
+                className="shrink-0 whitespace-nowrap px-4 py-2 rounded-lg bg-gloss-text text-gloss-bg text-sm font-medium hover:bg-gloss-text/85 transition-colors disabled:opacity-40"
               >
                 {loading ? "正在导入…" : "开始阅读 →"}
               </button>
+          </div>
+          </form>
+
+          {error && (
+            <div className="w-full max-w-xl px-4 py-3 rounded-lg bg-gloss-accent/10 border border-gloss-accent/30 text-sm text-gloss-accent">
+              {error}
             </div>
-          </div>
-        </form>
+          )}
+        </div>
 
-        {error && (
-          <div className="mt-6 max-w-xl mx-auto px-4 py-3 rounded-lg bg-gloss-accent/10 border border-gloss-accent/30 text-sm text-gloss-accent">
-            {error}
-          </div>
-        )}
-
-        {/* Three-step intro */}
-        <div className="mt-20 grid grid-cols-3 gap-6 text-left max-w-2xl mx-auto">
+        {/* Three-step intro. `mt-12` is the only thing separating these from
+            the composer above them now — the grid's own `gap-y-12` used to do
+            that, and the extra room reads better than the grid default here.
+            Each step is outlined with `gloss-border`, the hairline token whose
+            documented use is card outlines; the composer deliberately does not
+            use it, because that box is a control and needs the heavier
+            `gloss-import-composer` border instead. `grid-cols-1` below `sm`:
+            the border and the padding together take 32px out of what a phone
+            leaves per column, which is enough to break a four-character title
+            mid-word. */}
+        <div className="self-start mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-left max-w-2xl mx-auto w-full">
           {[
             {
               n: "1",
@@ -374,7 +432,7 @@ export default function Home() {
               body: "在侧栏阅读回答，并查看原文引用。",
             },
           ].map((step) => (
-            <div key={step.n}>
+            <div key={step.n} className="gloss-step-card rounded-xl border border-gloss-border p-4">
               <div className="text-gloss-accent font-mono text-xs mb-2">
                 {step.n}
               </div>
@@ -384,11 +442,6 @@ export default function Home() {
           ))}
         </div>
       </main>
-
-      <SettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
     </div>
   );
 }

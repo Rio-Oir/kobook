@@ -6,10 +6,10 @@
 /**
  * The legacy standalone reader's local space (`local-free:v1`).
  *
- * An earlier standalone version of this reader stored its own articles and
- * highlights under `local-free:v1` in localStorage. That space still exists on
- * the machine of anyone who used it, and the current app reads a different key
- * (`gloss-storage`, via `src/lib/store.ts`).
+ * Before this release the free product was a separate app (`apps/local-free`)
+ * that stored its own articles and highlights under `local-free:v1` in
+ * localStorage. That space still exists on the machine of anyone who used it,
+ * and this release reads a different key (`gloss-storage`, via `src/lib/store.ts`).
  *
  * So there are two obligations, and this module is both of them:
  *
@@ -35,13 +35,11 @@
  * says it is a free-text note carried over. The Reader shows the original
  * text; nothing pretends a model produced it. The lossless copy is still the
  * download, which is offered first.
- *
- * The key names and the `local-free-legacy` model label are part of the data
- * format on users' machines and are deliberately left exactly as they are.
  */
 
-import type { Article, Highlight, Paragraph } from "./types";
+import type { ArticleDraft, Highlight, Paragraph } from "./types";
 import { useStore } from "./store";
+import { readBody } from "./storage/bodies";
 
 export const LEGACY_STORAGE_KEY = "local-free:v1";
 export const LEGACY_NOTICE_DISMISSED_KEY = "gloss-legacy-local-free-notice-dismissed";
@@ -342,7 +340,7 @@ export interface LegacyImportResult {
  * same blob twice updates the same rows instead of duplicating them. It never
  * clears the current space and never removes the legacy key.
  */
-export function importLegacyIntoStore(): LegacyImportResult {
+export async function importLegacyIntoStore(): Promise<LegacyImportResult> {
   const raw = readRaw();
   if (raw === null) {
     return { ok: false, message: "没有检测到旧版本机数据。", articles: 0, highlights: 0, notes: 0 };
@@ -363,9 +361,17 @@ export function importLegacyIntoStore(): LegacyImportResult {
 
   // Refuse collisions before making any writes. Reimporting an old backup
   // must never replace a newer article or move an existing annotation.
+  //
+  // The comparison needs the article's *text*, which is no longer on the
+  // record — so this step reads the body. That is why the import is async now:
+  // the alternative was to skip the check for every article whose body had not
+  // already been loaded, which would silently turn "refuse collisions" into
+  // "refuse collisions sometimes".
   for (const legacy of parsed.space.articles) {
     const existing = store.articles[legacy.id];
-    if (existing && JSON.stringify(existing.paragraphs) !== JSON.stringify(legacy.paragraphs)) {
+    if (!existing) continue;
+    const body = await readBody(legacy.id);
+    if (JSON.stringify(body?.paragraphs) !== JSON.stringify(legacy.paragraphs)) {
       return { ok: false, message: "旧文章与当前同名记录冲突，未导入；请先保留原始备份。", articles: 0, highlights: 0, notes: 0 };
     }
   }
@@ -379,15 +385,14 @@ export function importLegacyIntoStore(): LegacyImportResult {
   for (const legacy of parsed.space.articles) {
     const existing = store.articles[legacy.id];
     if (existing) continue;
-    const article: Article = {
+    const article: ArticleDraft = {
       id: legacy.id,
       title: legacy.title,
-      paragraphs: legacy.paragraphs,
       createdAt: legacy.createdAt,
       ...(legacy.url ? { url: legacy.url } : {}),
       ...(legacy.author ? { author: legacy.author } : {}),
     };
-    useStore.getState().saveArticle(article);
+    await useStore.getState().saveArticle(article, legacy.paragraphs);
   }
 
   for (const legacy of parsed.space.highlights) {

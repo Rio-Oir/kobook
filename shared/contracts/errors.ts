@@ -6,11 +6,10 @@
 /**
  * Error contract.
  *
- * Every `/api/*` failure the service produces uses this shape. A remote
- * account or AI service answers in its own native shape, and readiness uses
- * the health contract. The `message` is user-displayable; it must never
- * contain SQL, stack traces, provider keys, cookies or database
- * credentials.
+ * Application sample failures use this shape. Better Auth retains its native
+ * error responses, and readiness uses the health contract. The `message` is
+ * user-displayable; it must never contain SQL, stack traces, provider keys,
+ * cookies or database credentials.
  */
 
 export type ApiErrorCode =
@@ -38,13 +37,14 @@ export type ApiErrorCode =
   | "ACCOUNT_DISABLED"
   /**
    * The import request body parsed fine, but the resulting document had no
-   * retainable text. 422 keeps it distinct from a malformed
+   * retainable text (audit P1#3). 422 keeps it distinct from a malformed
    * body (400) so the client can render the "粘贴正文" fallback.
    */
   | "EMPTY_ARTICLE"
   /**
-   * The route exists but the implementation is intentionally not wired yet.
-   * 501 is what clients should see, never a 500 that implies a failure.
+   * The route exists but the implementation is intentionally not wired yet
+   * (URL import in phase 3 slice 1; the Jina / SSRF work lands in slice 2).
+   * 501 is what clients should see, never 500.
    */
   | "NOT_IMPLEMENTED";
 
@@ -87,7 +87,7 @@ export function buildApiError(
 }
 
 /**
- * The replacement written over anything credential-shaped that would
- * otherwise reach a log sink or an API response.
+ * Cookie/credential-ish substrings that must never reach a log sink or an
+ * API response. Kept deliberately narrow so it does not mangle normal text.
  */
 export const REDACTED = "[redacted]";

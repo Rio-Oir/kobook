@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="KoBook">
+  <rect width="64" height="64" rx="14" fill="#F06E62"/>
+  <circle cx="24" cy="28" r="10" fill="none" stroke="#141414" stroke-width="5.5"/>
+  <line x1="14" y1="50" x2="40" y2="50" stroke="#141414" stroke-width="5.5" stroke-linecap="round"/>
+  <circle cx="48" cy="32" r="4.5" fill="#141414"/>
+</svg>

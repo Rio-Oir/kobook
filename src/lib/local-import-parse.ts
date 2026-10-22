@@ -15,7 +15,7 @@
  * for a node's text. What the old frontend parser did instead — split on blank
  * lines, drop anything shorter than 20 characters, strip `#`-lines as
  * "headings" — is precisely the behaviour that deleted short Chinese paragraphs
- * and every heading in the document.
+ * and every heading in the document (audit P1#3).
  *
  * The output contract is identical to the server's, field for field; see
  * `local-import-blocks.ts` for why that is asserted by a test rather than
@@ -29,11 +29,13 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import { toString } from "mdast-util-to-string";
 import type { List, ListItem, Nodes, Root, RootContent } from "mdast";
+import { absolutizeImageUrl } from "./import/image-url.js";
 import type {
   ContentBlockType,
   ParsedDocument,
   ParseResult,
 } from "../../shared/contracts/index.js";
+import { tableBlockText } from "../../shared/contracts/index.js";
 import {
   BlockCollector,
   EXTRACTOR_VERSION,
@@ -48,9 +50,11 @@ const processor = unified().use(remarkParse).use(remarkGfm);
 interface WalkContext {
   inQuote: boolean;
   orderedList: boolean;
+  /** 源页面地址：图片的相对路径按它解析（见 `LocalMarkdownParseOptions.baseUrl`）。 */
+  baseUrl: string | null;
 }
 
-const ROOT_CONTEXT: WalkContext = { inQuote: false, orderedList: false };
+const ROOT_CONTEXT: WalkContext = { inQuote: false, orderedList: false, baseUrl: null };
 
 /**
  * The parts of an mdast node this file looks at.
@@ -191,19 +195,57 @@ function listItemInline(item: ListItem, out: InlineTextBuilder): void {
   }
 }
 
-function walkList(list: List, ctx: WalkContext, out: BlockCollector): void {
+function walkList(
+  list: List,
+  ctx: WalkContext,
+  out: BlockCollector,
+  depth = 0,
+): void {
   const ordered = list.ordered ?? false;
   for (const item of list.children) {
     const builder = new InlineTextBuilder();
     listItemInline(item, builder);
-    addMeasured(out, "listItem", listItemOwnText(item), builder, { ordered });
+    // `checked` is `null` for an ordinary list item and a boolean for a GFM
+    // task item (`- [ ]` / `- [x]`). `mdast-util-to-string` does not include
+    // the checkbox in the text, so the offsets are unaffected.
+    const isTask = typeof item.checked === "boolean";
+    addMeasured(out, "listItem", listItemOwnText(item), builder, {
+      ordered,
+      depth,
+      ...(isTask ? { task: true, checked: item.checked === true } : {}),
+    });
     for (const child of item.children) {
-      if (child.type === "list") walkList(child, ctx, out);
+      if (child.type === "list") walkList(child, ctx, out, depth + 1);
       else if (child.type === "blockquote") {
         walkNodes(child.children, { ...ctx, inQuote: true }, out);
       }
     }
   }
+}
+
+function collectImages(node: unknown): Array<{ url: string; alt?: string; title?: string }> {
+  const found: Array<{ url: string; alt?: string; title?: string }> = [];
+  const visit = (current: unknown): void => {
+    if (!current || typeof current !== "object") return;
+    const value = current as {
+      type?: string;
+      url?: unknown;
+      alt?: unknown;
+      title?: unknown;
+      children?: unknown[];
+    };
+    if (value.type === "image" && typeof value.url === "string" && value.url.length > 0) {
+      found.push({
+        url: value.url,
+        ...(typeof value.alt === "string" && value.alt.length > 0 ? { alt: value.alt } : {}),
+        ...(typeof value.title === "string" && value.title.length > 0 ? { title: value.title } : {}),
+      });
+      return;
+    }
+    if (Array.isArray(value.children)) for (const child of value.children) visit(child);
+  };
+  visit(node);
+  return found;
 }
 
 function walkNodes(nodes: readonly RootContent[], ctx: WalkContext, out: BlockCollector): void {
@@ -213,9 +255,25 @@ function walkNodes(nodes: readonly RootContent[], ctx: WalkContext, out: BlockCo
         addFromNode(out, ctx.inQuote ? "quote" : "heading", node, { level: node.depth });
         break;
 
-      case "paragraph":
+      case "paragraph": {
+        const images = collectImages(node);
+        if (images.length > 0) {
+          for (const image of images) {
+            // 相对路径按源页面解析；解析不出来（内联 data:、没有源地址）就
+            // 丢掉这一块——渲染一个必然 404 的 <img> 比少一张图更糟。
+            const src = absolutizeImageUrl(image.url, ctx.baseUrl);
+            if (!src) continue;
+            out.add("image", image.alt?.trim() || "图片", {
+              src,
+              ...(image.alt ? { alt: image.alt } : {}),
+              ...(image.title ? { title: image.title } : {}),
+            });
+          }
+          break;
+        }
         addFromNode(out, ctx.inQuote ? "quote" : "paragraph", node);
         break;
+      }
 
       case "code":
         out.add("code", node.value, { lang: node.lang ?? null });
@@ -230,15 +288,19 @@ function walkNodes(nodes: readonly RootContent[], ctx: WalkContext, out: BlockCo
         break;
 
       case "table": {
-        // GFM table: one list item per row, cells joined readably.
-        for (const row of node.children) {
-          const cells = row.children.map((cell) => normalizeProse(toString(cell)));
-          out.add("listItem", cells.join(" | "), { ordered: false });
-        }
+        // GFM table: cells become a real table block. The first row is the
+        // header by GFM's own definition, which the renderer relies on.
+        const rows = node.children.map((row) =>
+          row.children.map((cell) => normalizeProse(toString(cell))),
+        );
+        if (rows.length > 0) out.add("table", tableBlockText(rows), { rows });
         break;
       }
 
       case "thematicBreak":
+        // `text` is never empty for a retained block (it is what `hash` is
+        // computed over), so a rule carries a fixed label rather than "".
+        out.add("hr", "分隔线");
         break;
 
       case "html": {
@@ -281,6 +343,31 @@ function deriveTitle(root: Root): string {
 export interface LocalMarkdownParseOptions {
   /** Overrides the extractor-derived title when provided. */
   title?: string;
+  /**
+   * Title to use when the document has no heading to derive one from.
+   *
+   * The same split every other importer in `src/lib/import/` uses, and it has
+   * to exist here too: `importFromFileBytes` passes `fallbackTitle` to all six
+   * parsers, and a parser whose options type does not declare it drops the
+   * value without a type error (the argument is a variable, so excess-property
+   * checking does not apply). A `.md` with no heading would then be titled
+   * "Untitled" — in English — instead of the file's name.
+   */
+  fallbackTitle?: string;
+  /**
+   * The page the Markdown came from, when there is one.
+   *
+   * Needed for exactly one thing: image addresses. A scraped page's Markdown
+   * often carries `/uploads/hero.jpg`, which is meaningless without that
+   * site's origin — stored as-is it would be requested from *our* domain and
+   * come back 404 (or, worse, as one of our own files). Resolved here, at
+   * import time, so what is stored is already a loadable absolute address.
+   *
+   * Absent for pasted text and local `.md` files, where a relative image
+   * address has no correct interpretation; those images are dropped rather
+   * than pointed at a guess.
+   */
+  baseUrl?: string | null;
 }
 
 /**
@@ -288,7 +375,7 @@ export interface LocalMarkdownParseOptions {
  *
  * Failure is a value, not an exception: `EMPTY_CONTENT` is a first-class
  * outcome, and an article that yields no text is rejected here so it can never
- * be persisted as an empty article. The caller decides whether
+ * be persisted as an empty article (audit P1#3). The caller decides whether
  * "no text" means "ask the user to paste more" or "try the server".
  */
 export function parseLocalMarkdown(
@@ -320,7 +407,11 @@ export function parseLocalMarkdown(
   }
 
   const collector = new BlockCollector();
-  walkNodes(root.children, ROOT_CONTEXT, collector);
+  walkNodes(
+    root.children,
+    { ...ROOT_CONTEXT, baseUrl: options.baseUrl ?? null },
+    collector,
+  );
   const blocks = collector.toBlocks();
 
   if (blocks.length === 0) {
@@ -332,7 +423,8 @@ export function parseLocalMarkdown(
   }
 
   const document: ParsedDocument = {
-    title: options.title?.trim() || deriveTitle(root) || "Untitled",
+    title:
+      options.title?.trim() || deriveTitle(root) || options.fallbackTitle?.trim() || "Untitled",
     author: null,
     blocks,
     source: "markdown-remark",

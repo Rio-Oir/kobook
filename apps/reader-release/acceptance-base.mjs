@@ -4,17 +4,13 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import {spawnSync} from 'node:child_process';
-import {existsSync,readFileSync,writeFileSync} from 'node:fs';
+import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {evidenceDir} from '../../scripts/evidence-dir.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-// Logs land under `artifacts/`, which the repository ignores, unless
-// `EVIDENCE_DIR` points the run somewhere else (see `scripts/evidence-dir.mjs`).
-// The value is inherited by every step below, so one setting covers the
-// production build, the service inject tests and the browser run.
-const evidence=evidenceDir('base-acceptance');
+const evidence=path.join(root,'docs/evidence/base-reproducibility');
+mkdirSync(evidence,{recursive:true});
 const tests=JSON.parse(readFileSync(path.join(root,'apps/reader-release/base-tests.json'),'utf8'));
 // Steps are `[name, args, envOverrides?]`.
 //
@@ -33,7 +29,7 @@ const steps=[
  ['base-units',['--import','tsx','--test',...tests]],
  ['production-build',['apps/reader-release/build.mjs'],{NODE_ENV:'production'}],
  ['anonymous-service',['--import','tsx','--import','./tests/fixtures/direct-http-preload.mjs','apps/reader-release/tests/server-inject.mjs']],
- ['real-browser',['--import','tsx','apps/reader-release/tests/base-browser.mjs']],
+ ['real-browser',['--import','tsx','apps/reader-release/tests/free-browser.mjs']],
 ];
 // Git for Windows bundles OpenSSL; resolve it without a machine-specific path.
 const env={...process.env,NODE_ENV:'test'};
@@ -56,5 +52,5 @@ for(const [name,args,overrides] of steps){
 }
 const git=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim();
 const lockHash=createHash('sha256').update(readFileSync(path.join(root,'package-lock.json'))).digest('hex');
-writeFileSync(path.join(evidence,'result.json'),JSON.stringify({at:new Date().toISOString(),checkpoint:git,node:process.version,lockHash,pass:results.length===steps.length&&results.every(r=>r.exitCode===0),scope:'base only; no cloud/database/auth/payment integration',selectedTests:tests,results},null,2)+'\n');
+writeFileSync(path.join(evidence,'result.json'),JSON.stringify({at:new Date().toISOString(),checkpoint:git,node:process.version,lockHash,pass:results.length===steps.length&&results.every(r=>r.exitCode===0),scope:'the open-source build: reading, import, accounts and cloud sync; no payment, entitlement or platform-AI surface',selectedTests:tests,results},null,2)+'\n');
 if(results.length!==steps.length||results.some(r=>r.exitCode!==0))process.exitCode=1;

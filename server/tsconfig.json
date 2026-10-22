@@ -2,8 +2,24 @@
   "compilerOptions": {
     "target": "ES2023",
     "lib": ["ES2023"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    // ── Why `bundler`, when this is a Node server ──────────────────────────
+    //
+    // Prisma's generated client lives at `server/src/generated/prisma/**`. It
+    // is a build artifact that `prisma generate` rewrites, it uses
+    // extensionless relative imports, and `NodeNext` refuses those outright.
+    // It is not this tree's to restyle — regenerating it would undo the edit —
+    // so the resolution mode has to follow the generator rather than the
+    // consumer.
+    //
+    // The one guarantee `NodeNext` gave this server — that every relative
+    // import carries an explicit `.js` extension, because Node's ESM loader
+    // requires one — is enforced by
+    // `tests/unit/server-import-extensions.test.ts` instead of by the
+    // compiler, and the emitted JavaScript is repaired by
+    // `server/scripts/emit-esm-extensions.mjs`. Losing a compiler check is
+    // worth stating out loud; losing it silently is not.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
 
     "rootDir": "..",
     "outDir": "dist",

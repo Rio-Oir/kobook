@@ -1,0 +1,35 @@
+name: gloss-phase1
+services:
+  db-dev:
+    image: postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_USER: gloss_dev
+      POSTGRES_PASSWORD: local_dev_only
+      POSTGRES_DB: gloss_dev
+    ports:
+      - "127.0.0.1:55434:5432"
+    volumes:
+      - db-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gloss_dev -d gloss_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  db-test:
+    image: postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_USER: gloss_test
+      POSTGRES_PASSWORD: local_test_only
+      POSTGRES_DB: gloss_phase1_test
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - db-test:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gloss_test -d gloss_phase1_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  db-dev:
+  db-test:

@@ -32,9 +32,11 @@ import {
   type CloudNoteAnchor,
   type CloudPersistStatus,
   type CloudUploadVerdict,
+  type CloudVersionVerdict,
 } from "./contract";
 import type { ExtractSource } from "../browser-extract-errors";
-import type { Article, ParsedDocument } from "../types";
+import type { Article, Paragraph, ParsedDocument } from "../types";
+import { documentFromArticle } from "../articles";
 
 /** Whether a cloud implementation is installed. */
 export function isCloudEnabled(): boolean {
@@ -250,16 +252,77 @@ export function enqueueArticleSync(
  */
 export function retryArticleSync(
   localArticle: Article,
+  paragraphs: readonly Paragraph[],
   submitIdentity?: { ownerUserId: string; epoch: number },
 ): void {
-  if (!localArticle.syncDocument) {
+  // No text means there is nothing to upload — an article whose body is not on
+  // this device cannot be re-sent from a record alone, and pretending otherwise
+  // would put an empty document on the wire.
+  if (paragraphs.length === 0) {
     useStore.getState().setArticleSyncStatus(localArticle.id, "rejected");
     return;
   }
   enqueueArticleSync(
     localArticle,
-    localArticle.syncDocument,
+    documentFromArticle(localArticle, paragraphs),
     localArticle.syncSource ?? "local",
     submitIdentity,
   );
+}
+
+// ── Edited version ───────────────────────────────────────────────────────
+
+/**
+ * Upload the local body as a new version of an article that already exists on
+ * the server.
+ *
+ * Called after a paragraph edit has committed locally. The local write is
+ * already durable; the return value is for the UI's status line, and the
+ * store's `editStatus` is the durable record of the outcome.
+ *
+ * Refuses to run for an article with no server row: that article's *first*
+ * upload already carries the edited body, and creating a version here would
+ * require an article id the server has not issued yet.
+ */
+export function syncArticleEdit(localArticleId: string): Promise<CloudVersionVerdict> {
+  const state = useStore.getState();
+  const article = state.articles[localArticleId];
+  const body = state.bodies[localArticleId];
+  if (!actingUserId() || !article?.remoteId || !body || body.state !== "present") {
+    return Promise.resolve({ status: "missing" });
+  }
+
+  const identity = { ownerUserId: state.ownerUserId, epoch: currentSessionEpoch() };
+  const document = documentFromArticle(article, body.body.paragraphs);
+  state.markArticleEditStatus(localArticleId, "syncing");
+
+  return callAdapter(
+    (adapter) =>
+      adapter.updateArticleVersion
+        ? adapter.updateArticleVersion({
+            remoteId: article.remoteId!,
+            blocks: document.blocks,
+            textHash: document.textHash,
+            ...(article.versionId ? { baseVersionId: article.versionId } : {}),
+            identity,
+          })
+        : Promise.resolve({ status: "missing" as const }),
+    { status: "network-error" as const },
+  ).then((verdict) => {
+    // A response that lands after a sign-out belongs to a session that no
+    // longer exists; record nothing, exactly like the upload verdict rule.
+    if (currentSessionEpoch() !== identity.epoch) {
+      return { status: "stale-owner" as const };
+    }
+    if (verdict.status === "uploaded") {
+      useStore.getState().applyArticleEditVersion(localArticleId, verdict.versionId);
+    } else if (verdict.status === "stale-owner") {
+      useStore.getState().markArticleEditStatus(localArticleId, "pending");
+    } else {
+      useStore
+        .getState()
+        .markArticleEditStatus(localArticleId, "failed", verdict.message);
+    }
+    return verdict;
+  });
 }

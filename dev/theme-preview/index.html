@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="neutral-day">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>配色候选预览 · Gloss</title>
+    <script type="module">
+      // `/src/index.css` is the app's real stylesheet: it brings the token
+      // contract and, more importantly, the real `.gloss-prose` typography,
+      // so this preview compares *colours* on the shipped layout rather
+      // than on a lookalike. `preview.css` only adds the chrome mock and
+      // the review controls.
+      import "/src/index.css";
+      import "./preview.css";
+      import { start } from "./preview.js";
+      start();
+    </script>
+  </head>
+  <body>
+    <!-- ── Review controls ────────────────────────────────────────────
+         Not part of the app. Day/night switch plus the candidate chips
+         for the mode you are looking at. -->
+    <div class="rv-bar">
+      <div class="rv-bar__group">
+        <span class="rv-bar__label">模式</span>
+        <div class="rv-seg" role="group" aria-label="日间或夜间">
+          <button type="button" data-mode="day" class="rv-seg__btn">日间</button>
+          <button type="button" data-mode="night" class="rv-seg__btn">夜间</button>
+        </div>
+      </div>
+      <div class="rv-bar__group rv-bar__group--grow">
+        <span class="rv-bar__label" id="rv-candidates-label">日间配色</span>
+        <div class="rv-chips" id="rv-chips" role="radiogroup" aria-labelledby="rv-candidates-label"></div>
+      </div>
+      <div class="rv-bar__group">
+        <button type="button" class="rv-seg__btn" id="rv-toggle-contrast">对比度实测</button>
+      </div>
+    </div>
+
+    <!-- ── The mock: the app shell at reading width ─────────────────── -->
+    <div class="app">
+      <header class="app-bar">
+        <div class="app-bar__left">
+          <button class="app-icon" title="返回" aria-label="返回">←</button>
+          <span class="app-logo">Gloss</span>
+          <span class="app-bar__crumb">阅读体验示例</span>
+        </div>
+        <div class="app-bar__right">
+          <span class="app-bar__meta">0 条笔记</span>
+          <button class="app-icon" title="目录" aria-label="目录">☰</button>
+          <button class="app-icon" title="主题：日间（点击切换到夜间）" aria-label="切换到夜间模式" id="app-mode-toggle">☀</button>
+          <button class="app-icon" title="设置" aria-label="设置">⚙</button>
+        </div>
+      </header>
+
+      <div class="app-body">
+        <nav class="app-toc">
+          <div class="app-toc__title">阅读、理解与留下想法</div>
+          <ol class="app-toc__list">
+            <li class="is-current">Markdown 的阅读体验</li>
+            <li>让 AI 帮助理解</li>
+            <li>下次回来继续阅读</li>
+          </ol>
+        </nav>
+
+        <main class="app-main">
+          <div class="article-head">
+            <span class="article-head__src">粘贴的正文</span>
+            <h1 class="article-head__title">阅读、理解与留下想法</h1>
+            <div class="article-head__meta">13 个段落 · 约 6 分钟</div>
+          </div>
+
+          <button class="brief-card" type="button">
+            <span class="brief-card__title">生成文章摘要</span>
+            <span class="brief-card__hint">先了解文章概要和关键观点，再深入阅读。</span>
+            <span class="brief-card__arrow">→</span>
+          </button>
+
+          <article class="gloss-prose">
+            <p>
+              阅读不只是获取信息，也是把新的内容与已有经验联系起来。一个好的阅读器，应当让人能够专注于文字，在需要时获得解释，并留下自己的思考。
+            </p>
+
+            <h2>一、Markdown 的阅读体验</h2>
+            <p>
+              Markdown 用简单的标记表达重要观点、<strong>强调</strong>、<em>倾斜</em>、
+              <code>行内代码</code>、<del>已删除的内容</del>与<a href="#">参考链接</a>。阅读时，这些标记应当成为清晰的排版，而不是需要读者自行脑补的符号。
+            </p>
+            <ul>
+              <li>清晰的标题与目录</li>
+              <li>舒服的正文宽度和行距</li>
+              <li>可以回到原文的笔记</li>
+            </ul>
+            <blockquote>
+              <p>读到值得停下来的地方，就在原文旁留下一句话。批注不是读后感，它锚定在某一段上。</p>
+            </blockquote>
+
+            <h3>代码与引用</h3>
+            <p>行内代码用 <code>rgb(var(--bg))</code> 这样的写法引用主题变量；整段代码则保留缩进：</p>
+            <pre class="gloss-pre"><code>// 主题变量由 &lt;html data-theme&gt; 决定
+export function resolveTheme(theme) {
+  if (theme === "system") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  return theme;
+}</code></pre>
+
+            <h2>二、让 AI 帮助理解</h2>
+            <p>
+              遇到陌生概念时，选中文字并询问：它是什么意思？它与前文有什么关系？有没有更容易理解的例子？
+            </p>
+            <ol>
+              <li>选中正文中的一句话</li>
+              <li>选择「解释」或「提问」</li>
+              <li>回答留在右侧，与原文一一对应</li>
+            </ol>
+
+            <table>
+              <thead>
+                <tr><th>操作</th><th>结果</th><th>位置</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>解释</td><td>一段话的释义</td><td>右侧笔记栏</td></tr>
+                <tr><td>提问</td><td>带原文引用的回答</td><td>右侧笔记栏</td></tr>
+                <tr><td>划线</td><td>原文上的标记</td><td>正文行内</td></tr>
+              </tbody>
+            </table>
+            <p class="rv-note">
+              注：解析层目前只有 heading / paragraph / listItem / code / quote 五种块类型，<strong>没有表格</strong>。上表只用于观察配色，不代表现有能力。
+            </p>
+
+            <h2>三、划线、选区与定位</h2>
+            <p>
+              下面一行用同一种颜色演示三种划线样式：
+              <mark class="gloss-mark" data-color="yellow" data-style="watercolor">水彩底纹的黄色划线</mark>、
+              <mark class="gloss-mark" data-color="green" data-style="line">直线下划的绿色划线</mark>、
+              <mark class="gloss-mark" data-color="blue" data-style="curve">波浪线的蓝色划线</mark>。
+            </p>
+            <p>
+              四种颜色并排：
+              <mark class="gloss-mark" data-color="yellow" data-style="watercolor">黄</mark>
+              <mark class="gloss-mark" data-color="green" data-style="watercolor">绿</mark>
+              <mark class="gloss-mark" data-color="blue" data-style="watercolor">蓝</mark>
+              <mark class="gloss-mark" data-color="red" data-style="watercolor">红</mark>。
+              这里还有一处带笔记的段落标记与目录定位标记
+              <span class="rv-pin" aria-hidden="true"></span>。
+            </p>
+            <p>
+              拖选这段文字即可看到选区颜色——它用的是「下一次划线」的颜色与透明度，所以拖动时看到的正是点击后的结果：
+              <span class="rv-selection">这段文字演示的是选区底色</span>。
+            </p>
+          </article>
+        </main>
+
+        <aside class="app-rail">
+          <div class="rail-empty">选中正文中的文字，即可解释或提问。回答会显示在这里。</div>
+
+          <div class="note-card">
+            <div class="note-card__quote">阅读不只是获取信息，也是把新的内容与已有经验联系起来。</div>
+            <div class="note-card__type">解释</div>
+            <div class="note-card__body">
+              这句话把阅读拆成两件事：接收信息，以及把新信息接进已有的理解里。后者才是留下的部分。
+            </div>
+            <div class="note-card__foot">
+              <span class="note-card__time">刚刚</span>
+              <button class="note-card__link" type="button">回到原文</button>
+            </div>
+          </div>
+
+          <div class="note-card">
+            <div class="note-card__quote">批注不是读后感，它锚定在某一段上。</div>
+            <div class="note-card__type">提问</div>
+            <div class="note-card__body">
+              锚定意味着笔记与段落绑定；段落重新解析后，笔记会跟着新的版本走，而不是漂到别处。
+            </div>
+            <div class="note-card__foot">
+              <span class="note-card__time">2 分钟前</span>
+              <button class="note-card__link" type="button">回到原文</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- ── Library card, to check list surfaces ─────────────────────── -->
+    <section class="rv-section">
+      <h2 class="rv-section__title">文章库</h2>
+      <div class="lib-grid">
+        <article class="lib-card">
+          <div class="lib-card__title">阅读、理解与留下想法</div>
+          <div class="lib-card__excerpt">
+            阅读不只是获取信息，也是把新的内容与已有经验联系起来。一个好的阅读器，应当让人能够专注于文字。
+          </div>
+          <div class="lib-card__foot">
+            <span class="lib-chip">本机</span>
+            <span class="lib-card__time">10 分钟前</span>
+          </div>
+        </article>
+        <article class="lib-card is-selected">
+          <div class="lib-card__title">选中的卡片</div>
+          <div class="lib-card__excerpt">选中态用强调色描边，与 hover 的灰色描边区分开。</div>
+          <div class="lib-card__foot">
+            <span class="lib-chip">已同步</span>
+            <span class="lib-card__time">昨天</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── Form controls, to check the outline token ────────────────── -->
+    <section class="rv-section">
+      <h2 class="rv-section__title">控件与焦点</h2>
+      <div class="ctl-row">
+        <label class="ctl">
+          <span class="ctl__label">接口地址</span>
+          <input class="ctl__input" value="https://api.example.com/v1" />
+        </label>
+        <label class="ctl">
+          <span class="ctl__label">模型</span>
+          <select class="ctl__input"><option>deepseek-chat</option></select>
+        </label>
+        <button class="ctl__primary" type="button">完成</button>
+        <button class="ctl__ghost" type="button">恢复默认设置</button>
+        <button class="ctl__focus" type="button">键盘焦点样式</button>
+      </div>
+    </section>
+
+    <!-- ── Contrast table, filled in by preview.js ──────────────────── -->
+    <section class="rv-section" id="rv-contrast">
+      <h2 class="rv-section__title">对比度实测</h2>
+      <p class="rv-section__hint">
+        数值由 <code>dev/theme-preview/measure.js</code> 计算，与 <code>contrast-report.mjs</code> 同源。
+        ✔ 达标，✘ 未达标，· 无阈值要求。
+      </p>
+      <div id="rv-contrast-body"></div>
+    </section>
+
+    <!-- ── Palette inventory ────────────────────────────────────────── -->
+    <section class="rv-section">
+      <h2 class="rv-section__title">色值清单</h2>
+      <div id="rv-tokens"></div>
+    </section>
+  </body>
+</html>

@@ -7,12 +7,15 @@
  * The channel vocabulary: where a document came from, and how an attempt
  * failed.
  *
- * Failure classification is a product requirement, not a debugging aid. It
- * exists to drive two decisions that must be made in different places:
+ * Failure classification is a product requirement, not a debugging aid. The
+ * extraction flow distinguishes network/DNS, timeout, CORS, HTTP, empty body
+ * and parse failures so the UI can explain the active fallback —
+ * so the taxonomy exists to drive two decisions that must be made in different
+ * places:
  *
  *   1. **what the user is told** — a rate limit and a dead network need
  *      different advice, and neither is `Failed to fetch`; and
- *   2. **whether the controlled fallback may run** — a cancelled request must
+ *   2. **whether the secondary extractor may run** — a cancelled request must
  *      not be retried against the backend (the user asked for it to stop), and
  *      an invalid URL must not be forwarded either.
  *
@@ -69,8 +72,7 @@ export interface ExtractFailure {
   /** Present when a response was actually received. */
   status?: number;
   /**
-   * Whether the orchestrator is allowed to try the controlled backend
-   * fallback after this failure.
+   * Whether the orchestrator is allowed to try another extraction path.
    *
    * `false` for `cancelled` (the user asked to stop; a silent second request
    * would contradict that) and for `invalid-url` (the server would refuse it
@@ -102,7 +104,7 @@ function seconds(ms: number): number {
 }
 
 /**
- * Kinds that may fall through to the controlled backend.
+ * Failure kinds that may fall through to another extractor.
  *
  * Written as a set rather than a chain of `if`s at the call site so the
  * "cancelled must not fall back" rule has exactly one home, and a new kind is
@@ -137,7 +139,10 @@ export function extractFailure(
 }
 
 /** The user-facing sentence for a failure kind. */
-export function failureMessage(kind: ExtractFailureKind, context: FailureContext = {}): string {
+export function failureMessage(
+  kind: ExtractFailureKind,
+  context: FailureContext & { status?: number } = {},
+): string {
   const deadline = context.deadlineMs ?? 10_000;
   const cap = context.maxBytes ?? 0;
   switch (kind) {
@@ -147,23 +152,25 @@ export function failureMessage(kind: ExtractFailureKind, context: FailureContext
       return "请输入有效的 http(s) 文章链接。";
     case "network":
       // Names the possibilities rather than picking one: see the module note.
-      return "无法直连抓取服务（可能是网络不可用、DNS 解析失败，或浏览器跨域限制）。正在尝试服务器备用抓取…";
+      return "抓取服务连接失败（可能是网络、DNS 或跨域问题）。请重试，或粘贴正文导入。";
     case "timeout":
-      return `直连抓取超时（${seconds(deadline)} 秒）。正在尝试服务器备用抓取…`;
+      return `抓取超时（${seconds(deadline)} 秒）。请重试，或粘贴正文导入。`;
     case "rate-limited":
-      return "抓取服务暂时限流（HTTP 429）。正在尝试服务器备用抓取…";
+      return "抓取服务暂时限流（HTTP 429）。请稍后重试，或粘贴正文导入。";
     case "http":
-      return "抓取服务返回了错误。正在尝试服务器备用抓取…";
+      return context.status === undefined
+        ? "抓取服务返回了错误。请重试，或粘贴正文导入。"
+        : `抓取服务返回了 HTTP ${context.status}。请重试，或粘贴正文导入。`;
     case "empty":
-      return "抓取服务返回了空正文。正在尝试服务器备用抓取…";
+      return "抓取服务返回了空正文。请粘贴正文导入。";
     case "format":
-      return "抓取服务返回的内容无法识别。正在尝试服务器备用抓取…";
+      return "抓取服务返回的内容无法识别。请粘贴正文导入。";
     case "too-large":
       return cap > 0
-        ? `抓取结果超过 ${megabytes(cap)} MB 上限。正在尝试服务器备用抓取…`
-        : "抓取结果过大。正在尝试服务器备用抓取…";
+        ? `抓取结果超过 ${megabytes(cap)} MB 上限。请粘贴正文导入。`
+        : "抓取结果过大。请粘贴正文导入。";
     case "parse":
-      return "已取得正文，但未能解析出可阅读的段落。正在尝试服务器备用抓取…";
+      return "已取得正文，但未能解析出可阅读的段落。请粘贴正文导入。";
     default: {
       const exhaustive: never = kind;
       return `抓取失败（${String(exhaustive)}）。`;
@@ -174,17 +181,17 @@ export function failureMessage(kind: ExtractFailureKind, context: FailureContext
 /**
  * The message for "both channels failed".
  *
- * The end state has to offer a way forward rather than a dead end, so this
- * names what went wrong on each side *and* tells the user what to do, which
- * neither failure's own message does — each of those promises a fallback that
- * has now also failed.
+ * Only reachable when a caller opts into the Jina channel (`jinaFallback`); the
+ * default path reports the server failure alone. The end state offers a way
+ * forward rather than a dead end: it names what went wrong on both paths *and*
+ * tells the user what to do.
  */
 export function combinedFailureMessage(
   primary: ExtractFailure,
   fallback: ExtractFailure,
 ): string {
   if (fallback.kind === "cancelled") return "已取消抓取。";
-  return `网页抓取失败：直连方式${shortReason(primary)}，服务器备用方式${shortReason(fallback)}。请手动粘贴文章正文后导入。`;
+  return `网页抓取失败：服务器 HTML/Readability ${shortReason(primary)}，Jina 备用方式${shortReason(fallback)}。请手动粘贴文章正文后导入。`;
 }
 
 /** A clause describing one failure, for use inside a longer sentence. */

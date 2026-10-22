@@ -16,8 +16,9 @@
  *   handshake with SNI = `93.184.216.34` and validates the certificate
  *   against that IP. Every correctly-configured HTTPS site fails, and
  *   the only way to make the request succeed is to stop verifying the
- *   certificate — which is exactly what must never happen here. The `Host:`
- *   header does not feed TLS; it only feeds the HTTP request line.
+ *   certificate — which is exactly the "不得关闭 TLS 校验" the plan
+ *   forbids. The `Host:` header does not feed TLS; it only feeds the
+ *   HTTP request line.
  *
  * The honest fix is to separate the two names, which is what `node:https`
  * already lets us do and `fetch` does not:

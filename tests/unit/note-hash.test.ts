@@ -6,7 +6,9 @@
 /**
  * Notes surface — unit tests for the pure helpers.
  *
- * This file pins the pure parts of the selection-hash rule:
+ * The actual cross-user / refresh / selection-tamper coverage lives in
+ * `tests/phase3.ts` because it needs a real Postgres. This file pins
+ * the parts that are testable without the database:
  *
  *   - `selectionHash` is over the *normalised* text, so a client that
  *     adds or removes whitespace still matches the server's hash.

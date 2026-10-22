@@ -7,16 +7,21 @@
  * Theme store tests.
  *
  * Cover the behaviours the front-end relies on:
- *   1. defaults: out-of-the-box the store is dark with an
+ *   1. defaults: out-of-the-box the store is in night mode with an
  *      "anonymous" owner stamp;
- *   2. `setTheme` mutates the value; `cycleTheme` walks the four
- *      fixed palettes;
- *   3. `resolveTheme("system")` follows `prefers-color-scheme`;
- *   4. `readPersistedPaletteKey` returns a concrete palette key
- *      for the inline bootstrap script in `index.html`;
- *   5. the v1 → v2 migration collapses the old `mode` / `reader`
- *      envelope into a single `theme`;
- *   6. `applyOwnership` (via `ownership`) resets the value on an
+ *   2. `setTheme` mutates the value; `toggleTheme` flips day ↔ night
+ *      and never lands on `system` — the whole point of replacing the
+ *      old four-palette cycle;
+ *   3. `toggleTheme` from `system` produces a visible change and stops
+ *      following the OS;
+ *   4. `resolveTheme("system")` follows `prefers-color-scheme`;
+ *   5. `readPersistedPaletteKey` returns a concrete mode for the inline
+ *      bootstrap script in `index.html`, including for blobs written by
+ *      older versions whose names no longer exist;
+ *   6. the v1 → v3 and v2 → v3 migrations map every retired name to the
+ *      mode it implied, so a user who had picked 护眼 or 米色 keeps the
+ *      light/dark intent they chose;
+ *   7. `applyOwnership` (via `ownership`) resets the value on an
  *      account switch but keeps it on a re-login.
  *
  * The localStorage polyfill is the same shape as
@@ -95,68 +100,63 @@ async function resetStore() {
   return useTheme;
 }
 
-test("defaults: dark theme, anonymous owner", async () => {
+test("defaults: night theme, anonymous owner", async () => {
   const useTheme = await resetStore();
   const s = useTheme.getState();
-  assert.equal(s.theme, "dark");
+  assert.equal(s.theme, "night");
   assert.equal(s.ownerUserId, "anonymous");
 });
 
 test("setTheme mutates the value", async () => {
   const useTheme = await resetStore();
-  useTheme.getState().setTheme("sepia");
-  assert.equal(useTheme.getState().theme, "sepia");
-  useTheme.getState().setTheme("paper");
-  assert.equal(useTheme.getState().theme, "paper");
+  useTheme.getState().setTheme("day");
+  assert.equal(useTheme.getState().theme, "day");
+  useTheme.getState().setTheme("night");
+  assert.equal(useTheme.getState().theme, "night");
 });
 
-test("cycleTheme walks dark → sepia → paper → light → dark", async () => {
+test("toggleTheme flips between exactly two modes and never reaches 'system'", async () => {
   const useTheme = await resetStore();
-  assert.equal(useTheme.getState().theme, "dark");
-  useTheme.getState().cycleTheme();
-  assert.equal(useTheme.getState().theme, "sepia");
-  useTheme.getState().cycleTheme();
-  assert.equal(useTheme.getState().theme, "paper");
-  useTheme.getState().cycleTheme();
-  assert.equal(useTheme.getState().theme, "light");
-  useTheme.getState().cycleTheme();
-  assert.equal(useTheme.getState().theme, "dark");
+  const seen: string[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    useTheme.getState().toggleTheme();
+    seen.push(useTheme.getState().theme);
+  }
+  // Starting from the default (night), five clicks alternate night/day.
+  assert.deepEqual(seen, ["day", "night", "day", "night", "day"]);
+  assert.ok(!seen.includes("system"), "the toggle must never land on system");
 });
 
-test("cycleTheme from 'system' resumes from the resolved palette so the click always changes", async () => {
+test("toggleTheme from 'system' produces a visible change and stops following the OS", async () => {
   const useTheme = await resetStore();
-  useTheme.getState().setTheme("system");
-  // OS prefers dark (the default in this file):  the cycle resumes
-  // from "dark" and advances to "sepia".
+  // OS prefers dark → resolved mode is night.
   prefersDark = true;
-  useTheme.getState().cycleTheme();
-  assert.notEqual(useTheme.getState().theme, "system");
-  assert.equal(useTheme.getState().theme, "sepia");
-
-  // OS prefers light:  the cycle resumes from "light" and advances
-  // to "dark".
   useTheme.getState().setTheme("system");
+  useTheme.getState().toggleTheme();
+  assert.equal(useTheme.getState().theme, "day", "the click must move away from the resolved mode");
+  assert.notEqual(useTheme.getState().theme, "system", "the click must stop following the OS");
+
+  // Same starting point on a light OS: the click lands on night.
   prefersDark = false;
-  useTheme.getState().cycleTheme();
-  assert.equal(useTheme.getState().theme, "dark");
+  useTheme.getState().setTheme("system");
+  useTheme.getState().toggleTheme();
+  assert.equal(useTheme.getState().theme, "night");
 });
 
 test("resolveTheme resolves 'system' against prefers-color-scheme", async () => {
   const { resolveTheme } = await import("../../src/lib/theme.js");
   prefersDark = true;
-  assert.equal(resolveTheme("system"), "dark");
+  assert.equal(resolveTheme("system"), "night");
   prefersDark = false;
-  assert.equal(resolveTheme("system"), "light");
+  assert.equal(resolveTheme("system"), "day");
   // Explicit values pass through untouched.
-  assert.equal(resolveTheme("dark"), "dark");
-  assert.equal(resolveTheme("light"), "light");
-  assert.equal(resolveTheme("sepia"), "sepia");
-  assert.equal(resolveTheme("paper"), "paper");
+  assert.equal(resolveTheme("day"), "day");
+  assert.equal(resolveTheme("night"), "night");
 });
 
 test("persistence: setTheme is written to the blob", async () => {
   const useTheme = await resetStore();
-  useTheme.getState().setTheme("paper");
+  useTheme.getState().setTheme("day");
   useTheme.getState().setOwner("user-1");
   const raw = memory.get("gloss-theme");
   assert.ok(raw, "persist must write the blob");
@@ -164,49 +164,63 @@ test("persistence: setTheme is written to the blob", async () => {
     state: { theme: string; ownerUserId: string };
     version: number;
   };
-  assert.equal(parsed.state.theme, "paper");
+  assert.equal(parsed.state.theme, "day");
   assert.equal(parsed.state.ownerUserId, "user-1");
-  assert.equal(parsed.version, 2);
+  assert.equal(parsed.version, 3);
 });
 
-test("v1 → v2 migration collapses mode/reader into theme", async () => {
-  // A blob written by the old (two-axis) store.
+test("v2 → v3 migration maps every retired palette name to a mode", async () => {
+  const { useTheme } = await import("../../src/lib/theme.js");
+  const cases: [string, string][] = [
+    ["light", "day"],
+    ["sepia", "day"],
+    ["paper", "day"],
+    ["dark", "night"],
+    ["system", "system"],
+  ];
+  for (const [stored, expected] of cases) {
+    memory.set(
+      "gloss-theme",
+      JSON.stringify({
+        state: { ownerUserId: "user-legacy", theme: stored },
+        version: 2,
+      }),
+    );
+    await useTheme.persist.rehydrate();
+    assert.equal(useTheme.getState().theme, expected, `${stored} must migrate to ${expected}`);
+    assert.equal(useTheme.getState().ownerUserId, "user-legacy");
+  }
+  // The blob is rewritten at the new version.
+  const persisted = JSON.parse(memory.get("gloss-theme")!) as {
+    version: number;
+    state: { theme: string };
+  };
+  assert.equal(persisted.version, 3);
+  assert.equal(persisted.state.theme, "system");
+});
+
+test("v1 → v3 migration reads the old `mode` field", async () => {
   memory.set(
     "gloss-theme",
     JSON.stringify({
-      state: { ownerUserId: "user-legacy", mode: "light", reader: "sepia" },
+      state: { ownerUserId: "user-v1", mode: "light", reader: "sepia" },
       version: 1,
     }),
   );
   const { useTheme } = await import("../../src/lib/theme.js");
   await useTheme.persist.rehydrate();
-  const s = useTheme.getState();
-  // The old `mode` (light) is the closest analogue; the `reader`
-  // pick is dropped.
-  assert.equal(s.theme, "light");
-  assert.equal(s.ownerUserId, "user-legacy");
-  // Migration rewrote the blob to v2.
-  const persisted = JSON.parse(memory.get("gloss-theme")!) as {
-    version: number;
-    state: { theme: string };
-  };
-  assert.equal(persisted.version, 2);
-  assert.equal(persisted.state.theme, "light");
+  assert.equal(useTheme.getState().theme, "day");
+  assert.equal(useTheme.getState().ownerUserId, "user-v1");
 });
 
-test("a v2 blob with 'system' is left untouched", async () => {
+test("an unknown stored value falls back to the default", async () => {
   memory.set(
     "gloss-theme",
-    JSON.stringify({
-      state: { ownerUserId: "user-2", theme: "system" },
-      version: 2,
-    }),
+    JSON.stringify({ state: { ownerUserId: "user-x", theme: "midnight" }, version: 2 }),
   );
   const { useTheme } = await import("../../src/lib/theme.js");
   await useTheme.persist.rehydrate();
-  const s = useTheme.getState();
-  assert.equal(s.theme, "system");
-  assert.equal(s.ownerUserId, "user-2");
+  assert.equal(useTheme.getState().theme, "night");
 });
 
 test("applyOwnership resets the theme on a different account sign-in", async () => {
@@ -217,15 +231,15 @@ test("applyOwnership resets the theme on a different account sign-in", async () 
   useStore.getState().clearUserCache();
   useSettings.getState().clearApiKey();
 
-  // Account A picks sepia.
-  useTheme.getState().setTheme("sepia");
+  // Account A picks day.
+  useTheme.getState().setTheme("day");
   useTheme.getState().setOwner("user-A");
   useStore.getState().setOwner("user-A");
 
-  // Account B signs in: the previous theme must not survive.
+  // Account B signs in: the previous mode must not survive.
   const decision = applyOwnership("user-B");
   assert.equal(decision, "clear");
-  assert.equal(useTheme.getState().theme, "dark", "theme must reset to default");
+  assert.equal(useTheme.getState().theme, "night", "theme must reset to default");
   assert.equal(useTheme.getState().ownerUserId, "user-B", "owner stamp moves to B");
 });
 
@@ -237,16 +251,16 @@ test("applyOwnership keeps the theme when the same account re-loads", async () =
   useStore.getState().clearUserCache();
   useSettings.getState().clearApiKey();
 
-  useTheme.getState().setTheme("paper");
+  useTheme.getState().setTheme("day");
   // First sign-in attaches the stamp.
   applyOwnership("user-B");
   assert.equal(useTheme.getState().ownerUserId, "user-B");
-  assert.equal(useTheme.getState().theme, "paper");
+  assert.equal(useTheme.getState().theme, "day");
 
   // Second probe with the same user: nothing changes.
   const decision = applyOwnership("user-B");
   assert.equal(decision, "keep");
-  assert.equal(useTheme.getState().theme, "paper");
+  assert.equal(useTheme.getState().theme, "day");
   assert.equal(useTheme.getState().ownerUserId, "user-B");
 });
 
@@ -258,7 +272,7 @@ test("applyOwnership on sign-out resets the value and the owner stamp", async ()
   useStore.getState().clearUserCache();
   useSettings.getState().clearApiKey();
 
-  useTheme.getState().setTheme("paper");
+  useTheme.getState().setTheme("day");
   applyOwnership("user-C");
   assert.equal(useTheme.getState().ownerUserId, "user-C");
 
@@ -266,10 +280,10 @@ test("applyOwnership on sign-out resets the value and the owner stamp", async ()
   assert.equal(decision, "clear", "switching authed → anon is a clear");
   const s = useTheme.getState();
   assert.equal(s.ownerUserId, "anonymous");
-  // The resetValue() path is intentional: it returns to the dark
-  // default rather than carrying the previous account's pick into
-  // a different user's session.
-  assert.equal(s.theme, "dark");
+  // The resetValue() path is intentional: it returns to the default
+  // rather than carrying the previous account's pick into a different
+  // user's session.
+  assert.equal(s.theme, "night");
 });
 
 test("every theme has a settings swatch entry (and vice versa)", async () => {
@@ -298,27 +312,46 @@ test("every theme has a settings swatch entry (and vice versa)", async () => {
   }
 });
 
-test("readPersistedPaletteKey returns the resolved palette for the bootstrap script", async () => {
+test("readPersistedPaletteKey resolves current and legacy blobs for the bootstrap script", async () => {
   const mod = await import("../../src/lib/theme.js");
   const useTheme = await resetStore();
-  // No persisted blob → default dark.
+
+  // No persisted blob → the default mode.
   memory.delete("gloss-theme");
-  assert.equal(mod.readPersistedPaletteKey(), "dark");
+  assert.equal(mod.readPersistedPaletteKey(), "night");
 
-  // Persist an explicit light choice and re-read.
-  useTheme.getState().setTheme("light");
-  assert.equal(mod.readPersistedPaletteKey(), "light");
+  // An explicit choice passes through.
+  useTheme.getState().setTheme("day");
+  assert.equal(mod.readPersistedPaletteKey(), "day");
 
-  // Sepia passes through untouched (no system resolution).
-  useTheme.getState().setTheme("sepia");
-  assert.equal(mod.readPersistedPaletteKey(), "sepia");
+  // A blob the current version wrote.
+  memory.set("gloss-theme", JSON.stringify({ state: { theme: "day" }, version: 3 }));
+  assert.equal(mod.readPersistedPaletteKey(), "day");
 
-  // Persist "system" with the OS dark → dark.
-  useTheme.getState().setTheme("system");
+  // A blob from before the two-mode change: `sepia` has no rule any more,
+  // so the bootstrap must map it rather than emit it.
+  for (const [stored, expected] of [
+    ["light", "day"],
+    ["sepia", "day"],
+    ["paper", "day"],
+    ["dark", "night"],
+  ] as const) {
+    memory.set("gloss-theme", JSON.stringify({ state: { theme: stored }, version: 2 }));
+    assert.equal(mod.readPersistedPaletteKey(), expected, `${stored} must map to ${expected}`);
+  }
+
+  // The v1 shape stored `mode`, not `theme`.
+  memory.set("gloss-theme", JSON.stringify({ state: { mode: "light" }, version: 1 }));
+  assert.equal(mod.readPersistedPaletteKey(), "day");
+
+  // Persist "system" and let the OS decide.
+  memory.set("gloss-theme", JSON.stringify({ state: { theme: "system" }, version: 3 }));
   prefersDark = true;
-  assert.equal(mod.readPersistedPaletteKey(), "dark");
-
-  // Same blob, OS flips to light → light.
+  assert.equal(mod.readPersistedPaletteKey(), "night");
   prefersDark = false;
-  assert.equal(mod.readPersistedPaletteKey(), "light");
+  assert.equal(mod.readPersistedPaletteKey(), "day");
+
+  // A corrupt blob must not throw.
+  memory.set("gloss-theme", "{not json");
+  assert.equal(mod.readPersistedPaletteKey(), "night");
 });

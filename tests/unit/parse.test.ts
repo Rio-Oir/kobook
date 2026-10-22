@@ -93,3 +93,143 @@ test('Empty inputs and metadata-only fixtures are rejected', async () => {
     if (!result.ok) assert.equal(result.code, 'EMPTY_CONTENT');
   }
 });
+
+test('server HTML parsing retains <img> with src/alt/title, like Markdown', () => {
+  const html = usable(parseHtml([
+    '<html><body><article>',
+    '<h1>带图片的文章</h1>',
+    '<p>图片前的一段正文，足够让 Readability 保留它。</p>',
+    '<p><img src="https://cdn.example.com/a.png" alt="示意图" title="图一"></p>',
+    '</article></body></html>',
+  ].join('')));
+  const image = html.blocks.find((b) => b.type === 'image');
+  assert.ok(image, 'the image must be retained as its own block');
+  assert.equal(image.src, 'https://cdn.example.com/a.png');
+  assert.equal(image.alt, '示意图');
+  assert.equal(image.title, '图一');
+  assert.equal(image.text, '示意图');
+
+  // Markdown produces the same shape for the same logical image, which is what
+  // the shared renderer depends on.
+  const markdown = usable(parseMarkdown('# 带图片的文章\n\n![示意图](https://cdn.example.com/a.png "图一")\n'));
+  const mdImage = markdown.blocks.find((b) => b.type === 'image');
+  assert.equal(mdImage?.src, image.src);
+  assert.equal(mdImage?.alt, image.alt);
+  assert.equal(mdImage?.title, image.title);
+  assert.equal(mdImage?.text, image.text);
+});
+
+test('server HTML parses tables and horizontal rules into their own blocks', () => {
+  const html = usable(parseHtml([
+    '<html><body><article>',
+    '<h1>表格</h1>',
+    '<p>表格前的一段正文，足够让 Readability 保留它。</p>',
+    '<table><thead><tr><th>列一</th><th>列二</th></tr></thead>',
+    '<tbody><tr><td>甲</td><td>乙</td></tr></tbody></table>',
+    '<hr>',
+    '<p>结尾。</p>',
+    '</article></body></html>',
+  ].join('')));
+  const table = html.blocks.find((b) => b.type === 'table');
+  assert.ok(table, 'the table must be retained as one block');
+  assert.deepEqual(table.rows, [
+    ['列一', '列二'],
+    ['甲', '乙'],
+  ]);
+  assert.equal(table.text, '列一 | 列二 甲 | 乙');
+
+  const hr = html.blocks.find((b) => b.type === 'hr');
+  assert.ok(hr, 'the rule must become an hr block');
+  assert.equal(hr.text, '分隔线');
+
+  // The Markdown extractor produces the same block kinds and the same table
+  // shape, which is what the shared renderer and sync schema depend on.
+  const markdown = usable(parseMarkdown([
+    '# 表格',
+    '',
+    '| 列一 | 列二 |',
+    '| --- | --- |',
+    '| 甲 | 乙 |',
+    '',
+    '---',
+    '',
+    '结尾。',
+  ].join('\n')));
+  const mdTable = markdown.blocks.find((b) => b.type === 'table');
+  assert.deepEqual(mdTable?.rows, table.rows);
+  assert.equal(mdTable?.text, table.text);
+  assert.equal(markdown.blocks.find((b) => b.type === 'hr')?.text, '分隔线');
+});
+
+test('server HTML carries nested list depth and task-item state', () => {
+  const html = usable(parseHtml([
+    '<html><body><article>',
+    '<h1>任务</h1>',
+    '<p>一段足够长的正文用来让 Readability 保留整篇文章内容。</p>',
+    '<ul>',
+    '<li>外层<ul><li>内层</li></ul></li>',
+    '<li class="task-list-item"><input type="checkbox" checked> 已完成</li>',
+    '</ul>',
+    '</article></body></html>',
+  ].join('')));
+  const items = html.blocks.filter((b) => b.type === 'listItem');
+  assert.deepEqual(
+    items.map((b) => [b.text, b.depth, b.task === true]),
+    [
+      ['外层', 0, false],
+      ['内层', 1, false],
+      // Readability removes form controls but keeps `task-list-item`, so the
+      // item is still recognised as a task; its tick state cannot survive
+      // that upstream cleanup.
+      ['已完成', 0, true],
+    ],
+  );
+});
+
+test('server HTML resolves relative image URLs against the supplied base URL only', () => {
+  const html = '<html><body><article><p>正文。</p><p><img src="media/a.png" alt="图"></p></article></body></html>';
+  const resolved = usable(parseHtml(html, { baseUrl: 'https://example.com/posts/1/' }));
+  assert.equal(
+    resolved.blocks.find((b) => b.type === 'image')?.src,
+    'https://example.com/posts/1/media/a.png',
+  );
+
+  // Without an origin a relative path cannot be made loadable, so it is dropped
+  // rather than pointed at this server's own origin.
+  const dropped = usable(parseHtml(html));
+  assert.equal(dropped.blocks.filter((b) => b.type === 'image').length, 0);
+
+  const rootRelative = usable(parseHtml(
+    '<html><body><article><p>正文。</p><p><img src="/media/b.png" alt="图"></p></article></body></html>',
+  ));
+  assert.equal(rootRelative.blocks.find((b) => b.type === 'image')?.src, '/media/b.png');
+});
+
+test("the page's share image travels with the document", () => {
+  // The cover fallback chain starts here: a scraped page that declares a share
+  // image should be shown with it, not with the bundled painting.
+  const html = `<!doctype html><html><head><title>测试</title>
+    <meta property="og:image" content="https://cdn.example.test/cover.jpg">
+  </head><body><article><p>正文。</p></article></body></html>`;
+  const doc = usable(parseHtml(html));
+  assert.equal(doc.coverImage, 'https://cdn.example.test/cover.jpg');
+
+  // `twitter:image` is the fallback when `og:image` is absent.
+  const twitter = usable(parseHtml(`<!doctype html><html><head><title>测试</title>
+    <meta name="twitter:image" content="https://cdn.example.test/twitter.jpg">
+  </head><body><article><p>正文。</p></article></body></html>`));
+  assert.equal(twitter.coverImage, 'https://cdn.example.test/twitter.jpg');
+
+  // A relative value is resolved against the fetched origin, exactly like a
+  // body `<img>`, and dropped when there is no origin to resolve against.
+  const relative = usable(parseHtml(`<!doctype html><html><head><title>测试</title>
+    <meta property="og:image" content="/img/hero.png">
+  </head><body><article><p>正文。</p></article></body></html>`, { baseUrl: 'https://example.test/post/1' }));
+  assert.equal(relative.coverImage, 'https://example.test/img/hero.png');
+
+  // `javascript:` and other schemes never become a cover.
+  const unsafe = usable(parseHtml(`<!doctype html><html><head><title>测试</title>
+    <meta property="og:image" content="javascript:alert(1)">
+  </head><body><article><p>正文。</p></article></body></html>`));
+  assert.equal(unsafe.coverImage, undefined);
+});

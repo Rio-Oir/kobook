@@ -6,11 +6,10 @@
 /**
  * Cross-segment selection validation.
  *
- * The behaviours this file exists for:
- *   - cross-paragraph coordinates (start/end block ids and offsets) plus
- *     server-side version, range and selection validation;
- *   - duplicate paragraphs stay distinguishable;
- *   - a selection inside a single paragraph still works.
+ * The phase-3 gates this file exists for:
+ *   - "补跨段坐标（起止 block ID/offset）及服务端版本/范围/选区校验";
+ *   - "重复段落可区分";
+ *   - "段内局部选择仍有效".
  *
  * The rule the first implementation got wrong is the one tested hardest
  * here: validating a multi-paragraph or offset-addressed selection

@@ -8,18 +8,19 @@
 // question at the END (Anthropic's "question at end" advice, also the
 // natural place for DeepSeek/OpenAI's prompt cache to begin invalidating).
 
-import type { Article } from "./types";
+import type { Article, Paragraph } from "./types";
 import { buildStableContext, buildExplainQuestion } from "./context";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 export function buildExplainMessages(
   article: Article,
+  paragraphs: readonly Paragraph[],
   selectionText: string,
   priorMessages: ChatMessage[] = [],
 ): ChatMessage[] {
   return [
-    { role: "system", content: buildStableContext(article) },
+    { role: "system", content: buildStableContext(article, paragraphs) },
     ...priorMessages,
     {
       role: "user",

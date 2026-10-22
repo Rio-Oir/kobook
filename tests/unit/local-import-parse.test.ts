@@ -101,8 +101,8 @@ test("EXTRACTOR_VERSION is the same in both packages", async () => {
   assert.equal(EXTRACTOR_VERSION, server.EXTRACTOR_VERSION);
 });
 
-test("EXTRACTOR_VERSION is phase1.2 (current pipeline)", () => {
-  assert.equal(EXTRACTOR_VERSION, "phase1.2");
+test("EXTRACTOR_VERSION is phase1.3 (current pipeline)", () => {
+  assert.equal(EXTRACTOR_VERSION, "phase1.3");
 });
 
 test("local sha256Hex matches node:crypto on multiple inputs", () => {
@@ -222,4 +222,75 @@ test("MAX_LOCAL_INPUT_BYTES matches server's MAX_INPUT_BYTES intent (2 MB)", () 
   // divergence is easier to spot when both numbers are local and
   // uncommented.
   assert.equal(MAX_LOCAL_INPUT_BYTES, 2 * 1024 * 1024);
+});
+
+test("local and server parsers agree on a GFM table and a thematic break", () => {
+  const md = [
+    "# 结构",
+    "",
+    "| 列一 | 列二 |",
+    "| --- | --- |",
+    "| 甲 | 乙 |",
+    "| 丙 | 丁 |",
+    "",
+    "---",
+    "",
+    "结尾。",
+  ].join("\n");
+  const local = usable(parseLocalMarkdown(md));
+  const server = usable(parseMarkdown(md));
+  assertSameDocument(local, server, "table+hr local vs server");
+
+  const table = local.blocks.find((b) => b.type === "table");
+  assert.ok(table, "a GFM table must become a table block");
+  assert.deepEqual(table.rows, [
+    ["列一", "列二"],
+    ["甲", "乙"],
+    ["丙", "丁"],
+  ]);
+  // `text` is the flat join `hash` is computed over; `normalizeProse`
+  // collapses the newlines, so it is one line on the wire.
+  assert.equal(table.text, "列一 | 列二 甲 | 乙 丙 | 丁");
+  assert.equal(table.hash, sha256Hex(table.text));
+
+  const hr = local.blocks.find((b) => b.type === "hr");
+  assert.ok(hr, "a thematic break must become an hr block");
+  assert.equal(hr.text, "分隔线");
+  assert.equal(hr.rows, undefined);
+  assert.equal(hr.level, undefined);
+});
+
+test("local and server parsers agree on nested lists and GFM task items", () => {
+  const md = [
+    "- 外层",
+    "  - 内层一",
+    "  - 内层二",
+    "- [ ] 未完成",
+    "- [x] 已完成",
+    "- 外层二",
+    "  - [ ] 嵌套未完成",
+  ].join("\n");
+  const local = usable(parseLocalMarkdown(md));
+  const server = usable(parseMarkdown(md));
+  assertSameDocument(local, server, "nested+task local vs server");
+
+  const items = local.blocks.filter((b) => b.type === "listItem");
+  assert.deepEqual(
+    items.map((b) => [b.text, b.depth, b.task === true, b.checked === true]),
+    [
+      ["外层", 0, false, false],
+      ["内层一", 1, false, false],
+      ["内层二", 1, false, false],
+      ["未完成", 0, true, false],
+      ["已完成", 0, true, true],
+      ["外层二", 0, false, false],
+      ["嵌套未完成", 1, true, false],
+    ],
+  );
+  // The checkbox is metadata, not text: it must not be inside the block's
+  // `text`, because that string is the coordinate system for highlights.
+  assert.ok(!items.some((b) => b.text.includes("[")));
+  assert.equal(items[3]!.task, true);
+  assert.equal(items[3]!.checked, false);
+  assert.equal(items[4]!.checked, true);
 });

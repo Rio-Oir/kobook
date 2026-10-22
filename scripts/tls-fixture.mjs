@@ -9,7 +9,7 @@
  * The importer pins a connection to an already-vetted IP. That trick is
  * only safe if the *TLS identity* stays the original hostname — otherwise
  * the request would either fail against every real HTTPS site or have to
- * disable verification, which would defeat the guard entirely.
+ * disable verification, which the plan forbids outright.
  *
  * Proving that needs three certificates and a DNS name that is not in the
  * public DNS:
@@ -118,7 +118,7 @@ export function ensureTlsFixture() {
   openssl([
     "req", "-x509", "-newkey", "rsa:2048", "-nodes",
     "-keyout", p.caKey, "-out", p.caCert, "-days", "3650",
-    "-subj", "/CN=kobook-local-tls-fixture-CA",
+    "-subj", "/CN=gloss-local-tls-fixture-CA",
     "-addext", "basicConstraints=critical,CA:TRUE",
     "-addext", "keyUsage=critical,keyCertSign,cRLSign",
   ]);

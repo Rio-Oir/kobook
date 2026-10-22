@@ -1,0 +1,47 @@
+-- Markdown layer 2: inline emphasis offsets + the source each version was
+-- parsed from.
+--
+-- Two unrelated features share one migration because they are both
+-- single nullable ADD COLUMNs on tables this phase already owns, and
+-- `schema.prisma` is a file several agents edit — one round of
+-- coordination is cheaper than two. Neither column needs a backfill and
+-- neither changes any existing value.
+
+-- ── 1. paragraph.spans — inline emphasis ───────────────────────────────────
+-- A JSON array of `InlineSpan` (see `shared/contracts/content.ts`): half-open
+-- UTF-16 offsets onto *this row's own* `text`, plus which of
+-- bold / italic / inline code / strikethrough / link apply.
+--
+-- Offsets rather than a run tree is the load-bearing choice. `text` stays the
+-- only statement of what the characters are, so this column changes nothing
+-- that is already anchored on it: not `hash`, not the version's `textHash`,
+-- not an existing note's `selectionText` check (`lib/selection.ts` slices
+-- `text` and never reads this column), and not the client's selection
+-- measurement (`src/lib/text-offset.ts` measures `Range.toString()`, and an
+-- inline element contributes only its text). The alternative — storing the
+-- text as runs and joining them to derive the string — would have made
+-- emphasis a change to *what the text is*, and every offset in the system
+-- would have had to be re-argued.
+--
+-- NULL means "no inline emphasis", which is what every existing row means.
+-- Readers treat NULL as plain text, never as an error, so no article in the
+-- library becomes unreadable the moment this lands.
+ALTER TABLE "paragraph" ADD COLUMN "spans" JSONB;
+
+-- ── 2. article_version.sourceText — the input this version came from ───────
+-- Before this column, nothing anywhere kept the source. `POST
+-- /api/articles/:id/refresh` requires the client to send the content again,
+-- and for a pasted article that content had already been discarded by both
+-- the server and the browser — so the article could never be re-parsed, and
+-- an extractor improvement could never reach it. It is also the one
+-- prerequisite the in-Reader Markdown editor has: without the source there
+-- is nothing to open for editing.
+--
+-- NULL means "source unavailable" for rows written earlier, and is also what
+-- every URL version keeps: its source is still fetchable upstream, so a copy
+-- of every fetched third-party page would buy nothing the re-fetch does not.
+-- Read it as "ask the user", not as empty text.
+--
+-- The value is third-party input (pasted text). It is only ever fed back to
+-- the parse layer; it is never rendered as HTML.
+ALTER TABLE "article_version" ADD COLUMN "sourceText" TEXT;

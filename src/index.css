@@ -7,92 +7,175 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .gloss-import-composer {
+    border-color: rgb(var(--text) / 0.2);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.16), inset 0 1px 0 rgb(var(--text) / 0.06);
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .gloss-import-composer:focus-within {
+    border-color: rgb(var(--text) / 0.45);
+    box-shadow: 0 0 0 3px rgb(var(--text) / 0.07), 0 10px 28px rgb(0 0 0 / 0.2);
+  }
+
+  [data-theme="day"] .gloss-import-composer {
+    background-color: rgb(var(--bg));
+    border-color: rgb(var(--text) / 0.12);
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.02), 0 6px 18px rgb(0 0 0 / 0.05);
+  }
+
+  [data-theme="day"] .gloss-import-composer:focus-within {
+    border-color: rgb(var(--text) / 0.28);
+    box-shadow: 0 0 0 3px rgb(var(--text) / 0.035), 0 6px 18px rgb(0 0 0 / 0.06);
+  }
+
+  /* The three step cards on the home page.
+   *
+   * Flat until the pointer reaches for one. The resting state is a sheet of
+   * paper sitting on the page; the lift is the whole effect, so nothing here
+   * animates on load and the page stays as quiet as the reader screen behind
+   * it.
+   *
+   * Shadows are written per theme rather than taken from Tailwind's defaults,
+   * which are mixed for light surfaces and read as grey smudge on black paper
+   * — where a dark drop shadow is invisible anyway. So the night hover leans
+   * on the paper going one step lighter plus a brighter edge, and the day
+   * hover gets the real shadow and a card that goes to plain white.
+   */
+  .gloss-step-card {
+    background-color: rgb(var(--surface));
+    transition:
+      transform 180ms ease,
+      background-color 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  /* `hover: hover` so a tap on a touch screen does not leave the card stuck
+     in its lifted state with nothing to lift it back. */
+  @media (hover: hover) {
+    .gloss-step-card:hover {
+      transform: translateY(-2px);
+      background-color: rgb(var(--surface2));
+      border-color: rgb(var(--text) / 0.22);
+      box-shadow: 0 12px 30px rgb(0 0 0 / 0.6);
+    }
+  }
+
+  [data-theme="day"] .gloss-step-card {
+    border-color: rgb(var(--text) / 0.12);
+  }
+
+  @media (hover: hover) {
+    [data-theme="day"] .gloss-step-card:hover {
+      background-color: rgb(var(--bg));
+      border-color: rgb(var(--text) / 0.2);
+      box-shadow: 0 10px 24px rgb(0 0 0 / 0.1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gloss-step-card {
+      transition: none;
+    }
+
+    @media (hover: hover) {
+      .gloss-step-card:hover {
+        transform: none;
+      }
+    }
+  }
+}
+
 /*
- * Theme variables — single-axis design.
+ * Theme variables — two modes, one paper each.
  *
- * Four palettes, one set of tokens, applied to the entire page:
- *   - light: near-white reading surface (not "washed-out sepia")
- *   - dark : near-black background, warm white text (default)
- *   - sepia: warm cream, the classic e-reader tone
- *   - paper: cooler, darker oatmeal — deliberately pulled away from sepia
+ *   - day  : white paper, black ink      (`#ffffff` / `#000000`)
+ *   - night: black paper, white ink      (`#000000` / `#ffffff`) — default
  *
- * `<html data-theme="...">` is the single source of truth. The
- * inline bootstrap script in `index.html` sets it before React
- * mounts so the first paint is already the right colours (no flash
- * of the wrong palette). The `Theme` store writes the same attribute
- * on every change. `system` resolves to light/dark against
- * `prefers-color-scheme` (see `lib/theme.ts`).
+ * The paper and the ink are the values open-source reading software ships
+ * for exactly this pair: Foliate's Light and Invert themes, Thorium
+ * Reader's Neutral and Contrast1, Readium CSS's default
+ * `--RS__backgroundColor`. Reading apps agree on three things, and this
+ * pair follows all of them — ink is neutral (no hue), paper is low-chroma,
+ * and the page carries one hue at most. See
+ * `docs/配色研究记录-2026-10-19.md`.
+ *
+ * The remaining tokens (chrome, borders, the secondary text tone) are
+ * *derived*, not taken from a source: a reader needs two colours, this app
+ * needs a full token set. They are the smallest neutral steps that reach
+ * the thresholds below, mixed from the paper toward the ink so the greys
+ * stay neutral.
+ *
+ * `<html data-theme="...">` is the single source of truth. The inline
+ * bootstrap script in `index.html` sets it before React mounts so the
+ * first paint is already the right colours (no flash of the wrong mode).
+ * The `Theme` store writes the same attribute on every change. `system`
+ * resolves to day/night against `prefers-color-scheme` (see
+ * `lib/theme.ts`).
  *
  * ## Depth model
  *
- * Reading surface `--bg` is the brightest plane; chrome `--surface`
- * sits a shade below it and `--surface2` a shade below that. This is
- * the Kindle "the whole page is paper" model, and it matches Material
- * 3's light-theme tonal elevation (higher container = darker). The
- * steps are deliberately small (≈1.12–1.6:1) — a large jump makes
- * cards compete with the text for attention, which is the opposite of
- * what a reader wants. Because the steps are small, separation is
- * carried by `--border` as a hairline, not by the fill difference
- * alone.
+ * Reading surface `--bg` is the brightest plane; chrome `--surface` sits a
+ * shade away from it and `--surface2` a shade further. The steps are small
+ * (≈1.12–1.4:1) and separation is carried by `--border` as a hairline.
  *
- * Two rules the previous palette broke and this one keeps:
- *   - **the input/chrome hierarchy never inverts**: a control is
- *     drawn on `--surface2` (a recess), never on `--bg` inside a
- *     `--surface` panel. Inverting it makes the field look like a
- *     hole punched through to the page.
- *   - **one depth signal per region**: either a fill step or a
- *     border, not both at full strength.
+ * **This model is under review.** The measured cost is that the top bar,
+ * the table of contents and the notes rail all paint themselves with `--bg`
+ * rather than with `--surface`, so ~90% of the screen is one value and the
+ * page reads as a single flat sheet. `docs/配色逻辑-2026-10-19.md` sets out
+ * the plane structure that would fix it; until that is agreed the tokens
+ * here keep their current jobs and only the paper and ink have changed.
  *
  * ## Two border tokens
  *
- * `--border` is a decorative hairline (dividers, card outlines) and
- * may sit at ~1.3:1. `--outline` is a *control* boundary, which WCAG
- * 1.4.11 requires to reach 3:1, so text inputs and selects use it
- * instead. Material 3 splits these the same way (`outline-variant`
- * vs `outline`).
+ * `--border` is a decorative hairline (dividers, card outlines).
+ * `--outline` is a *control* boundary, which WCAG 1.4.11 requires to reach
+ * 3:1, so text inputs and selects use it instead. Material 3 splits these
+ * the same way (`outline-variant` vs `outline`).
  *
  * ## Channel triplets
  *
- * Colours are space-separated RGB triplets (`--bg: 251 250 247`), not
- * hex, because Tailwind v3 composes `bg-gloss-bg/80` through an
- * `rgb(... / <alpha-value>)` template; a raw hex or `var()` value
- * cannot receive that alpha and the opacity variant would silently
- * generate no rule at all.
+ * Colours are space-separated RGB triplets (`--bg: 255 255 255`), not hex,
+ * because Tailwind v3 composes `bg-gloss-bg/80` through an
+ * `rgb(... / <alpha-value>)` template; a raw hex or `var()` value cannot
+ * receive that alpha and the opacity variant would silently generate no
+ * rule at all.
  */
 @layer base {
   :root,
-  [data-theme="dark"] {
+  [data-theme="night"] {
     color-scheme: dark;
-    --bg: 12 12 12;
-    --surface: 22 22 22;
-    --surface2: 30 30 30;
-    --border: 42 42 42;
-    --outline: 110 107 102;
-    --text: 235 233 230;
-    --textDim: 160 157 151;
+    --bg: 0 0 0;
+    --surface: 18 18 18;
+    --surface2: 29 29 29;
+    --border: 39 39 39;
+    --outline: 104 104 104;
+    --text: 255 255 255;
+    --textDim: 126 126 126;
     --accent: 240 110 98;
     --highlight: 240 198 116;
     /* Alpha scalars for places that tint a channel triplet directly. */
     --code-alpha: 0.18;
-    /* Highlight swatch colours, tuned so a low-alpha wash stays
-     * legible behind body text on this background. */
-    --hl-yellow: 220 180 60;
-    --hl-green: 100 180 80;
-    --hl-blue: 80 150 220;
-    --hl-red: 220 100 90;
-    --hl-mark-alpha: 0.28;
+    /* Use the source reader's latest night highlight palette and strength. */
+    --hl-yellow: 245 205 80;
+    --hl-green: 130 205 100;
+    --hl-blue: 110 180 245;
+    --hl-red: 245 130 120;
+    --hl-mark-alpha: 0.82;
     --hl-line-alpha: 0.95;
   }
 
-  [data-theme="light"] {
+  [data-theme="day"] {
     color-scheme: light;
-    --bg: 251 250 247;
-    --surface: 241 238 232;
-    --surface2: 231 227 219;
-    --border: 222 218 210;
-    --outline: 143 139 131;
-    --text: 24 23 21;
-    --textDim: 100 96 90;
+    --bg: 255 255 255;
+    --surface: 242 242 242;
+    --surface2: 230 230 230;
+    --border: 218 218 218;
+    --outline: 131 131 131;
+    --text: 0 0 0;
+    --textDim: 109 109 109;
     --accent: 187 60 47;
     --highlight: 217 165 46;
     --code-alpha: 0.12;
@@ -101,44 +184,364 @@
     --hl-blue: 90 170 240;
     --hl-red: 240 120 110;
     --hl-mark-alpha: 0.35;
+    --hl-line-alpha: 0.95;
   }
 
-  [data-theme="sepia"] {
-    color-scheme: light;
-    --bg: 246 239 222;
-    --surface: 236 227 206;
-    --surface2: 225 215 192;
-    --border: 212 201 176;
-    --outline: 138 116 97;
-    --text: 74 58 44;
-    --textDim: 108 90 72;
-    --accent: 156 66 40;
-    --highlight: 217 165 46;
-    --code-alpha: 0.16;
-    --hl-yellow: 245 200 40;
-    --hl-green: 120 200 90;
-    --hl-blue: 90 170 240;
-    --hl-red: 240 120 110;
-    --hl-mark-alpha: 0.35;
+  /* Sidebars.
+   *
+   * The rails are the same paper as the article, in both modes — one plane,
+   * no second colour. A chrome surface a shade apart puts two vertical
+   * panels in competition with the column, and in night mode (black paper)
+   * any lighter surface becomes exactly the "white sides" bug this
+   * replaced. What marks the edges instead is the permanent hairline on
+   * each draggable seam (`.gloss-column-grip::before`), which is also the
+   * thing the pointer grabs.
+   *
+   * The rail keeps no token overrides. It inherits the reading mode's
+   * `--bg` / `--surface` / ink set, so day and night are each a single
+   * surface end to end, and every card or control inside the rail is drawn
+   * from the same palette as the article.
+   */
+  .gloss-reader-rail {
+    background-color: rgb(var(--bg));
+    color: rgb(var(--text));
+    min-height: calc(100vh - 60px);
+    min-width: 0;
   }
 
-  [data-theme="paper"] {
-    color-scheme: light;
-    --bg: 232 224 206;
-    --surface: 221 212 192;
-    --surface2: 208 198 176;
-    --border: 192 180 156;
-    --outline: 122 110 90;
-    --text: 40 35 30;
-    --textDim: 90 78 64;
-    --accent: 150 60 44;
-    --highlight: 201 138 48;
-    --code-alpha: 0.14;
-    --hl-yellow: 245 200 40;
-    --hl-green: 120 200 90;
-    --hl-blue: 90 170 240;
-    --hl-red: 240 120 110;
-    --hl-mark-alpha: 0.35;
+  .gloss-reading-layout {
+    background-color: rgb(var(--bg));
+  }
+
+  .gloss-reading-layout > main {
+    background-color: rgb(var(--bg));
+    min-height: calc(100vh - 60px);
+  }
+
+  @media (min-width: 1024px) {
+    .gloss-reading-layout {
+      /*
+       * The article's column width, derived from the measure.
+       *
+       * Declared here rather than on `:root` because the `100%` in the cap
+       * has to resolve against this element — a custom property is
+       * substituted as tokens and computed where it is *used*, so the
+       * percentage means "the grid container's inline size" only because
+       * the declaration sits inside the rule that turns this element into
+       * a grid.
+       *
+       * The `4rem` is the same one that was here before: two sides of
+       * `md:px-8`, the article's own padding inside the column.
+       *
+       * One cap, and it is the window: the article stops where the two
+       * lanes begin, so both handles stay on screen. There is deliberately
+       * **no readability cap** — an earlier version had one at 800px, and
+       * it did two bad things. It overrode a width the reader had dragged
+       * to on the next reload, and, because the tracks have to fill the
+       * row, the space it refused to give the article was pushed onto the
+       * *other* rail: dragging the left edge visibly widened the notes
+       * panel. How wide the line is, is the reader's decision and nothing
+       * else may touch it.
+       *
+       * The Reader overrides this property directly while a drag is in
+       * flight, which is why it is a property and not a formula baked
+       * into the track list.
+       */
+      /* The article track is the text box, two number gutters and the page's
+       * own side padding.
+       *
+       * The gutter is counted twice on purpose: the left one holds the
+       * paragraph numbers, and the right one mirrors it so the text is
+       * optically centred in the column instead of sitting 2rem off it. The
+       * `4rem` is the page padding (`md:px-8`, 2 × 32px); it is part of the
+       * drag's arithmetic (`columnWidthFor`) and must stay in step with it. */
+      --reading-column-w: min(
+        calc(
+          var(--reading-measure) * var(--reading-font-size) +
+            2 * var(--reading-gutter) + 4rem
+        ),
+        calc(100% - 2 * var(--reading-rail-lane))
+      );
+
+      /*
+       * The left rail, placed by hand.
+       *
+       * `--reading-rail-balance` is the reader's share of the *slack* —
+       * what is left of the row after the article and the two lanes — so
+       * 0.5 is centred and 0 pins the article against the left lane.
+       *
+       * Written out rather than left to `minmax(12px, N fr)` on each rail,
+       * which is the obvious encoding and does not work: `fr` hands out the
+       * free space and *then* clamps to the minimum, and Chromium does not
+       * give the clamped-away space back to the other rail. At a 826px
+       * article in a 1440px row with a 0.2/0.8 split the rails came out
+       * 200px and 331px and the 82px the left rail could not use was
+       * simply lost, leaving the row short of its width. Computing the left
+       * rail here and letting the right one take the remainder with `1fr`
+       * gives the browser no room to disagree.
+       *
+       * Note what the 0.5 default means now: *every* reader who has not
+       * dragged gets equal rails, at every width, whether or not the
+       * outline is drawn. Nothing in this file consults the rails' own
+       * visibility, so hiding one moves nothing.
+       */
+      --reading-rail-left-w: calc(
+        var(--reading-rail-lane) +
+          var(--reading-rail-balance, 0.5) *
+          (100% - var(--reading-column-w) - 2 * var(--reading-rail-lane))
+      );
+
+      display: grid;
+      /*
+       * Three tracks: the outline rail, the article, the notes rail.
+       *
+       * Both rails are measured from `--reading-rail-lane` and neither is
+       * clamped, so a rail's width is exactly what the balance says. A rail
+       * dragged narrow enough has its content hidden (below), but its track
+       * keeps following the pointer: the article is entitled to every pixel
+       * the reader is asking for, and stopping the drag short of the lane
+       * would leave them dragging through dead space.
+       */
+      grid-template-columns:
+        var(--reading-rail-left-w)
+        minmax(0, var(--reading-column-w))
+        minmax(0, 1fr);
+    }
+
+    /* A rail that has been pushed out of the way keeps its lane and nothing
+     * else.
+     *
+     * `visibility` rather than `display`, and set from a custom property
+     * rather than an attribute, for two reasons. The subtree stays mounted,
+     * so the outline keeps its place at the active heading and the notes
+     * rail keeps its scroll position across a gesture the reader can undo
+     * with the next pixel; and the drag can flip it mid-flight the same way
+     * it writes every other rail property — one inline custom property,
+     * with the stored value taking over on release.
+     *
+     * Nothing here clips: an element with `visibility: hidden` takes no
+     * pointer events and the article's own track paints over the overflow,
+     * so `overflow: hidden` would only cost the sticky positioning both
+     * rails depend on. */
+    .gloss-outline-rail > * {
+      visibility: var(--reading-rail-left-content, visible);
+    }
+
+    .gloss-notes-rail > * {
+      visibility: var(--reading-rail-right-content, visible);
+    }
+
+    .gloss-reading-layout > main {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .gloss-outline-rail {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .gloss-outline-rail > div {
+      max-width: 224px;
+      margin-left: auto;
+    }
+
+    .gloss-notes-rail {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .gloss-notes-rail > div {
+      max-width: 400px;
+    }
+  }
+
+  /* ── The draggable column edges ────────────────────────────────
+   * One handle per seam, placed as a grid item in the rail's own track
+   * and pushed half its width across the boundary with a negative
+   * margin. Being a grid item rather than an absolutely positioned child
+   * of a rail is what lets the left handle exist while the outline is
+   * closed — the track is still there, it is just empty — so the article
+   * can be resized from either side at any time.
+   *
+   * Drawn at rest, not only on hover. The rails share the article's paper,
+   * so the two backgrounds no longer meet at the seam and a hidden rule
+   * would leave nothing saying the boundary is there. A permanent hairline
+   * is the smallest mark that names it; hover, focus and drag deepen it and
+   * bring up the knob.
+   *
+   * `touch-action: none` is required, not cosmetic: without it the
+   * browser claims the horizontal drag as a scroll gesture and the
+   * `pointermove` stream stops after the first few pixels on a phone.
+   */
+  .gloss-column-grip {
+    display: none;
+  }
+
+  @media (min-width: 1024px) {
+    .gloss-column-grip {
+      display: block;
+      grid-row: 1;
+      /* Sticky rather than stretched. The grid row is as tall as the
+       * article, so a handle that filled it would put its knob in the
+       * middle of the document instead of the middle of the screen. */
+      align-self: start;
+      position: sticky;
+      top: 60px;
+      height: calc(100vh - 60px);
+      width: 12px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: col-resize;
+      touch-action: none;
+      z-index: 2;
+    }
+
+    .gloss-column-grip[data-side="left"] {
+      grid-column: 1;
+      justify-self: end;
+      margin-right: -6px;
+    }
+
+    .gloss-column-grip[data-side="right"] {
+      grid-column: 3;
+      justify-self: start;
+      margin-left: -6px;
+    }
+  }
+
+  /* The visible rule. Drawn as a pseudo-element rather than as the
+   * button's own border so the 12px hit area and the 2px line can have
+   * different sizes. */
+  .gloss-column-grip::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 5px;
+    width: 2px;
+    border-radius: 2px;
+    background: rgb(var(--textDim) / 0.22);
+    opacity: 1;
+    transition: opacity 140ms ease, background-color 140ms ease;
+  }
+
+  .gloss-column-grip:hover::before,
+  .gloss-column-grip:focus-visible::before {
+    background: rgb(var(--textDim) / 0.55);
+  }
+
+  .gloss-column-grip[data-dragging]::before {
+    background: rgb(var(--accent) / 0.7);
+  }
+
+  /* The knob: a small pill in the middle of the rule, so the seam reads
+   * as something you can take hold of rather than as another border. */
+  .gloss-column-grip::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 2px;
+    width: 8px;
+    height: 32px;
+    margin-top: -16px;
+    border-radius: 99px;
+    background: rgb(var(--textDim) / 0.5);
+    box-shadow: 0 0 0 2px rgb(var(--bg) / 0.9);
+    opacity: 0;
+    transition: opacity 140ms ease, background-color 140ms ease;
+  }
+
+  .gloss-column-grip:hover::after,
+  .gloss-column-grip:focus-visible::after,
+  .gloss-column-grip[data-dragging]::after {
+    opacity: 1;
+  }
+
+  .gloss-column-grip[data-dragging]::after {
+    background: rgb(var(--accent));
+  }
+
+  /* A rail that has been pushed out of the way leaves only a 12px lane, so
+   * the handle is the one thing still saying where the rail went. The rule
+   * is already permanent; this deepens it, and the knob is flattened into a
+   * short dash pointing back at the lane — the direction that pulls the
+   * rail out again. */
+  .gloss-column-grip[data-collapsed]:not([data-dragging])::before {
+    background: rgb(var(--textDim) / 0.4);
+  }
+
+  .gloss-column-grip[data-collapsed]::after {
+    opacity: 0.7;
+    height: 14px;
+    margin-top: -7px;
+  }
+
+  .gloss-column-grip[data-collapsed]:not([data-dragging]):hover::before,
+  .gloss-column-grip[data-collapsed]:not([data-dragging]):focus-visible::before {
+    background: rgb(var(--textDim) / 0.55);
+  }
+
+  .gloss-column-grip[data-collapsed]:hover::after,
+  .gloss-column-grip[data-collapsed]:focus-visible::after {
+    opacity: 1;
+  }
+
+  /*
+   * Reading typography parameters — the article body's font size, line
+   * height, measure (characters per line) and paragraph gap.
+   *
+   * These live here, not in the article data, because they describe how
+   * *this device* renders a document rather than what the document says.
+   * `lib/reading-prefs.ts` owns the user's choice and overrides them as
+   * inline custom properties on the reading column; these are the defaults
+   * for a reader who has not chosen anything.
+   *
+   * The two defaults that are not constants:
+   *
+   *   - `--reading-font-size` is 18px on a phone and 20px from 768px up.
+   *     The agreed first-version starting points are 20px desktop / 18px
+   *     phone, and one stored number cannot express both — so the store
+   *     keeps "no choice" as `null` and the breakpoint supplies the value.
+   *     Choosing a size in the settings panel writes an inline
+   *     `--reading-font-size`, which wins at every width: an explicit
+   *     choice should not be silently undone by a breakpoint.
+   *   - `--reading-gutter` is the space a block reserves to the left of its
+   *     own text for the paragraph number: the original 2rem at every size.
+   *
+   * `--reading-measure` is unitless on purpose: it is a count of full-width
+   * characters, and `.gloss-reading-column` multiplies it by the *current*
+   * font size, so the measure stays 30 characters whether the reader has
+   * chosen 16px or 24px.
+   *
+   * There is no `--reading-column-max`. There was one, at 50rem, and it is
+   * gone on purpose: how wide the line is, is the reader's decision, made
+   * by dragging the column's edges. A guard that silently re-capped a width
+   * they had dragged to — on the next reload, no less — was rewriting a
+   * choice that was not its to make. `MEASURE_RANGE` in
+   * `lib/reading-prefs.ts` bounds the stored value, and it is the same
+   * range the settings slider offers, so the two cannot disagree.
+   */
+  :root {
+    --reading-font-size: 18px;
+    --reading-line-height: 1.8;
+    --reading-measure: 30;
+    --reading-para-gap: 0.8em;
+    --reading-gutter: 2rem;
+    /* What a rail leaves behind when it has been dragged shut. Never zero:
+     * the drag handle is a grid item in the rail's own track, so a
+     * zero-width track would put the one gesture that undoes the last one
+     * off the edge of the viewport. Mirrors `RAIL_LANE_PX`. */
+    --reading-rail-lane: 12px;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --reading-font-size: 20px;
+      --reading-gutter: 2rem;
+    }
   }
 
   html,
@@ -150,7 +553,7 @@
   body {
     background: rgb(var(--bg));
     color: rgb(var(--text));
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 200ms ease, color 200ms ease;
@@ -180,144 +583,186 @@
   }
 }
 
+/* iOS Safari zooms the whole page into any field whose font size is under
+ * 16px when it takes focus, and then leaves the page zoomed. The reader
+ * has several of them — the ask box, the note editor, the settings
+ * selects — and a question typed into one of them used to throw the
+ * article off-screen mid-sentence.
+ *
+ * Scoped to `pointer: coarse` rather than applied globally, because on a
+ * desktop pointer the same 16px would be a visible jump away from the
+ * 13–14px the surrounding chrome uses. `!important` is required: the
+ * fields carry Tailwind `text-sm` / `text-xs` utilities, which live in a
+ * later layer than this rule and would otherwise win.
+ *
+ * Range and the check/radio/file inputs are excluded because the zoom
+ * rule does not apply to them and their box sizes are tuned to their
+ * own metrics. */
+@media (pointer: coarse) {
+  input:not([type="range"], [type="checkbox"], [type="radio"], [type="file"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 @layer components {
+  /* The reading column.
+   *
+   * The measure is a count of full-width characters (`--reading-measure`,
+   * default 30) multiplied by the *current* font size, plus the block
+   * gutter — because the number slot is part of the column's box but not
+   * part of the text, and a "30 character" column that silently loses 2rem
+   * of text width to padding is not 30 characters. The same reasoning is
+   * why this is `max-width` on the column and not a padding on the page:
+   * the column is centred in whatever the surrounding layout leaves, and
+   * the measure is the only thing that decides how wide the text gets.
+   *
+   * No `min()` here any more. The column used to be capped at 50rem on top
+   * of the measure, which meant a reader who dragged the edge past that
+   * width saw the track grow and the words inside it stop — a drag that
+   * reported a width nobody could see. The measure alone is the width now,
+   * and the drag's own limit is the window.
+   */
+  .gloss-reading-column {
+    max-width: calc(
+      var(--reading-measure) * var(--reading-font-size) +
+        2 * var(--reading-gutter)
+    );
+  }
+
   /* Article prose. The Reader page wraps the article in
-   * `.gloss-prose`; it inherits the theme variables from
-   * `<html data-theme>` because there is no separate reader palette.
+   * `.gloss-prose` (plus the Typography plugin's `prose`); it inherits the
+   * theme variables from `<html data-theme>` because there is no separate
+   * reader palette.
+   *
+   * Element-level typography — headings, paragraphs, lists, quotes, inline
+   * code, links — is configured in `tailwind.config.js` and emitted by the
+   * plugin. What remains here is only what the plugin cannot know about:
+   * the paragraph-number gutter, the highlight marks and the code-block
+   * box. That split is deliberate; a second full set of paragraph and
+   * heading rules here would be a competing base style.
    */
   .gloss-prose {
+    font-family: "Charter", "Georgia", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", SimSun, serif;
     background: rgb(var(--bg));
     color: rgb(var(--text));
     transition: background-color 200ms ease, color 200ms ease;
+
+    /* Kerning is a font feature the browser applies by default in most
+     * cases, but it is worth stating for a serif body face where the
+     * pairs that need it (Latin punctuation next to Latin letters, in a
+     * mostly-Chinese paragraph) are exactly the ones a reader notices
+     * when they are missing. */
+    font-kerning: normal;
+
+    /* Chinese text opens blocks with `「`, `“` or `（` often enough that
+     * the indent they create at the left edge is visible as a ragged
+     * margin. `first` lets the browser hang that opening punctuation
+     * outside the column so the first *glyph* lines up with the rest of
+     * the text, which is what Chinese typesetting does on paper.
+     *
+     * Progressive enhancement, deliberately. Measured on the Chromium
+     * the browser gate runs (156.0.8078.4): `CSS.supports(
+     * "hanging-punctuation", "first")` is **false**, so this is a no-op
+     * in the gate and in Chrome generally, and it is Safari that
+     * implements it. Where it is unsupported the declaration is simply
+     * ignored and the text renders exactly as it does today, with the
+     * punctuation inside the column — there is no wrong-but-visible
+     * intermediate state, which is why this needs no feature query. */
+    hanging-punctuation: first;
   }
 
-  .gloss-prose p {
-    font-family: "Newsreader", "Charter", "Georgia", "Noto Serif SC", "Songti SC", "SimSun", serif;
-    font-size: 1.0625rem;
-    line-height: 1.75;
-    color: rgb(var(--text));
-    margin-bottom: 1.5rem;
-  }
-
-  .gloss-prose p:first-letter {
-    /* Drop cap not enabled, but reserved */
-  }
-
-  /* Inline code in prose */
-  .gloss-prose code {
-    font-family: "JetBrains Mono", "Menlo", monospace;
-    font-size: 0.875em;
-    background: rgb(var(--highlight) / var(--code-alpha));
-    padding: 0.125em 0.375em;
-    border-radius: 0.25rem;
-    color: rgb(var(--text));
-  }
-
-  /* ── Inline emphasis ───────────────────────────────────────────
-   * The parser records bold / italic / inline code / strikethrough /
-   * links as offsets onto the block's text, and the Reader renders them
-   * as the matching inline elements. Most of them need nothing here —
-   * `strong` keeps preflight's `font-weight: bolder`, and `em` and
-   * `del` keep their user-agent defaults (`italic`, `line-through`).
+  /* Line-breaking refinement for the prose blocks.
    *
-   * Links are the exception and the reason this block exists: preflight
-   * sets `a { color: inherit; text-decoration: inherit }`, so without a
-   * rule of their own links would render as ordinary body text and a
-   * reader would have no way to tell a link from the words around it.
+   * `pretty` asks the browser to avoid a very short last line — a single
+   * English word stranded on its own line, or a lone closing `。` — which
+   * is the one line-breaking decision CSS can still influence. It is a
+   * hint, not a guarantee, and it is ignored by browsers that do not
+   * implement it.
    *
-   * Styling only — never a generated glyph. `rangeToOffsets` measures a
-   * selection with `Range.toString()`, so an arrow or a domain badge
-   * rendered here (including via `::after { content }`, which Chromium
-   * counts) would shift every stored highlight after it in the block.
-   * See `src/pages/Reader.tsx` and `src/lib/blocks.ts`.
+   * Deliberately not applied to headings: `balance` is the right tool
+   * there, and the title sets it directly (see `titleSizeClass` in
+   * `src/lib/blocks.ts`). A block that is one line long has nothing to
+   * balance or avoid, so the cost of the browser's lookahead pass on a
+   * long article is the only thing this buys; it is kept because the
+   * payoff is on exactly the long paragraphs that make up an article. */
+  .gloss-prose :is(p, li, blockquote) {
+    text-wrap: pretty;
+  }
+
+  /* ── The paragraph-number gutter ───────────────────────────────
+   * Every block carries a `<span data-paragraph-marker>` as its first
+   * child. It is *not* decoration that can be dropped: `rangeToOffsets`
+   * measures a selection with `Range.toString()` and subtracts the
+   * marker's text back out, so the span has to stay a real element inside
+   * the block, and the block's text has to remain exactly
+   * `paragraph.text` (see `src/lib/blocks.ts`).
+   *
+   * Keep the original number placement and 2rem text gutter at every size,
+   * and mirror that gutter on the right. The left gutter belongs to the
+   * paragraph numbers; without the right one the text sits 2rem off-centre
+   * inside the column and hugs the draggable edge.
    */
-  .gloss-prose a {
+  .gloss-prose [data-paragraph-index] {
+    position: relative;
+    padding-left: var(--reading-gutter);
+    padding-right: var(--reading-gutter);
+  }
+
+  .gloss-prose [data-paragraph-marker] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    user-select: none;
+    /* Quiet by default: the number is a coordinate, not a label. The note
+     * dot is the one state that has to be noticed, so it is the accent. */
+    color: rgb(var(--textDim) / 0.4);
+    transition: color 160ms ease;
+  }
+
+  /* The number belongs to its paragraph, and says so when you point at
+   * one. Resting alpha is 0.4 because a column of numbers at full
+   * strength competes with the text; on hover it lifts to 0.75, which
+   * is enough to connect the two without reaching the accent — that
+   * colour is already spoken for by `data-has-note` below, and two
+   * different meanings sharing one colour is worse than either being
+   * quiet.
+   *
+   * The `>` matters: the marker is always the block's own first child,
+   * so a nested block (a list inside a quote) must not light its
+   * parent's number.
+   *
+   * `:not([data-has-note])` is not decoration. The hover selector
+   * carries one more simple selector than the note rule below it, so
+   * without the exclusion, hovering a paragraph that has a note would
+   * out-specify the accent and dim the one number that is supposed to
+   * stay lit. */
+  .gloss-prose
+    [data-paragraph-index]:hover
+    > [data-paragraph-marker]:not([data-has-note]) {
+    color: rgb(var(--textDim) / 0.75);
+  }
+
+  /* A note's own paragraph keeps its number lit at rest: the number is
+   * how the note in the margin names the paragraph it is about. */
+  .gloss-prose [data-paragraph-marker][data-has-note] {
     color: rgb(var(--accent));
-    text-decoration: underline;
-    text-decoration-thickness: 0.06em;
-    text-underline-offset: 0.18em;
-    /* A pasted URL with no break opportunity would otherwise widen the
-     * whole column and push the layout sideways. */
-    overflow-wrap: anywhere;
   }
 
-  .gloss-prose a:hover {
-    text-decoration-thickness: 0.12em;
+  /* Keep quote numbers clear of the border. */
+  .gloss-prose blockquote > [data-paragraph-marker] {
+    left: 0.5rem;
   }
 
-  /* Struck-through text is text the author retracted, so it recedes
-   * rather than competing with the surrounding prose. */
-  .gloss-prose del {
-    color: rgb(var(--textDim));
-  }
-
-  /* ── Block hierarchy ───────────────────────────────────────────
-   * The parse layer classifies every block and records heading depth;
-   * until now the Reader rendered all five kinds as the same `<p>`, so
-   * a Markdown document's structure was invisible on screen even though
-   * it was stored correctly. These rules are that missing half.
-   *
-   * ## The one rule every rule below obeys
-   *
-   * `rangeToOffsets` measures a selection as
-   * `Range.toString().length` over the block element, so **the text in
-   * a block must be exactly `paragraph.text` and nothing more**.
-   * Chromium *does* include `::before { content: … }` in
-   * `Range.toString()`, which rules out the obvious ways of drawing
-   * decoration inside a block:
-   *
-   *   - no generated list bullets (`content: "•"`) — `list-style`
-   *     is used instead, because `::marker` is not DOM text;
-   *   - no generated quote glyph, no heading anchor `#`, no
-   *     code-language badge rendered as text.
-   *
-   * Padding, margins, borders and background colour are all safe: they
-   * move glyphs around but add no characters. Anything that would add
-   * one belongs outside the block's element.
-   *
-   * `tests/unit/blocks.test.ts` pins the round trip per block kind, so
-   * a future decorative flourish fails a test rather than silently
-   * shifting every stored highlight.
-   *
-   * Tailwind's preflight zeroes heading sizes, list styles and block
-   * margins, so each of the following has to restate what it needs.
-   */
-
-  /* Headings. Depth reads from three signals at once — size, weight and
-   * the space above — because a single one is easy to miss while
-   * scrolling. `margin-top` deliberately exceeds `margin-bottom` so a
-   * heading groups with the text it introduces instead of floating
-   * between two sections. */
-  .gloss-prose h2,
-  .gloss-prose h3,
-  .gloss-prose h4,
-  .gloss-prose h5,
-  .gloss-prose h6 {
-    font-family: "Newsreader", "Charter", "Georgia", "Noto Serif SC", "Songti SC", "SimSun", serif;
-    color: rgb(var(--text));
-    font-weight: 600;
-    line-height: 1.35;
-    letter-spacing: -0.005em;
-    margin-top: 2.25rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .gloss-prose h2 {
-    font-size: 1.55rem;
-    margin-top: 3rem;
-  }
-  .gloss-prose h3 {
-    font-size: 1.3rem;
-  }
-  .gloss-prose h4 {
-    font-size: 1.125rem;
-  }
-  .gloss-prose h5 {
-    font-size: 1rem;
-  }
-  .gloss-prose h6 {
-    font-size: 0.9375rem;
-    color: rgb(var(--textDim));
+  /* A list item that carries a note shows the accent dot in the margin
+   * gutter. The bullet would land in the same gutter, so it steps aside
+   * rather than overlapping. */
+  .gloss-prose li[data-has-note] {
+    list-style: none;
   }
 
   /* The article body's first block sits directly under the title, which
@@ -326,82 +771,26 @@
     margin-top: 0;
   }
 
-  /* Lists. Preflight removes `list-style` outright, so it is restored
-   * here — and restored as `list-style`, not as a generated bullet,
-   * for the reason in the section comment. `list-style-position:
-   * outside` keeps the bullet in the gutter where it cannot land in the
-   * measured text. */
-  .gloss-prose ul,
-  .gloss-prose ol {
-    margin-bottom: 1.5rem;
-    /* The list itself is inset a little from the paragraph gutter, so
-     * nesting reads as a step in rather than as a floating block. */
-    padding-left: 0.75rem;
-  }
-
-  .gloss-prose ul {
-    list-style: disc outside;
-  }
-
-  .gloss-prose ol {
-    list-style: decimal outside;
-  }
-
-  .gloss-prose li {
-    font-family: "Newsreader", "Charter", "Georgia", "Noto Serif SC", "Songti SC", "SimSun", serif;
-    font-size: 1.0625rem;
-    line-height: 1.75;
-    color: rgb(var(--text));
-    margin-bottom: 0.375rem;
-  }
-
-  /* A list item that carries a note shows the accent dot in the margin
-   * gutter. The bullet would land in the same 2rem gutter, so it steps
-   * aside rather than overlapping. */
-  .gloss-prose li[data-has-note] {
-    list-style: none;
-  }
-
-  /* Quotes. A rule in the gutter plus a dimmed colour — deliberately
-   * not italic, which for CJK is a synthesised oblique that costs
-   * legibility instead of adding emphasis. */
-  .gloss-prose blockquote {
-    border-left: 2px solid rgb(var(--border));
-    color: rgb(var(--textDim));
-    font-family: "Newsreader", "Charter", "Georgia", "Noto Serif SC", "Songti SC", "SimSun", serif;
-    font-size: 1.0625rem;
-    line-height: 1.75;
-    margin-bottom: 1.5rem;
-  }
-
-  /* Nudge the paragraph number off the quote's rule. */
-  .gloss-prose blockquote > [data-paragraph-marker] {
-    left: 0.5rem;
-  }
-
   /* Code blocks. The wrapper owns the outer spacing; the `<pre>` owns
    * the box. Panning is horizontal rather than wrapping because
-   * wrapping code destroys indentation as a readability signal. */
+   * wrapping code destroys indentation as a readability signal. The
+   * typography (font, size, colour, background) comes from the plugin
+   * config; this is the box around it. */
   .gloss-code {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--reading-para-gap);
   }
 
   .gloss-prose .gloss-pre {
-    background: rgb(var(--surface));
     border: 1px solid rgb(var(--border));
     border-radius: 0.5rem;
     padding: 0.875rem 1rem;
-    overflow-x: auto;
-    font-family: "JetBrains Mono", "Menlo", monospace;
-    font-size: 0.875rem;
-    line-height: 1.65;
-    color: rgb(var(--text));
-    white-space: pre;
-    tab-size: 2;
   }
 
   /* Reset the inline-code pill inside a fenced block, or every line of
-   * code would carry its own tinted rounded background. */
+   * code would carry its own tinted rounded background. The plugin resets
+   * this too (`pre code`); restating it here keeps the reader's code-block
+   * contract in one readable place and keeps it winning if the plugin's
+   * rule order ever changes. */
   .gloss-prose .gloss-pre code {
     background: none;
     padding: 0;
@@ -450,11 +839,38 @@
     --mark-rgb: var(--hl-red);
   }
 
+  /* ── Note card: the reader's question blocks ────────────────────
+   *
+   * Same colour channel as the mark in the article body, so a question
+   * asked about a green passage is green in the sidebar too. The channel
+   * is set, never a colour: nothing here paints a fixed hue, and a
+   * theme swap keeps the pairing.
+   */
+  .note-question {
+    /* The sidebar's own look before questions were drawn as turns. */
+    --note-rgb: var(--accent);
+    border-left-color: rgb(var(--note-rgb) / 0.55);
+    background: rgb(var(--note-rgb) / 0.1);
+  }
+  .note-question-label {
+    color: rgb(var(--note-rgb) / 0.9);
+  }
+  .note-question[data-color="yellow"] {
+    --note-rgb: var(--hl-yellow);
+  }
+  .note-question[data-color="green"] {
+    --note-rgb: var(--hl-green);
+  }
+  .note-question[data-color="blue"] {
+    --note-rgb: var(--hl-blue);
+  }
+  .note-question[data-color="red"] {
+    --note-rgb: var(--hl-red);
+  }
+
   /* ── Shape 1: watercolour ──────────────────────────────────────
-   * A stack of translucent layers of one colour. Where the layers
-   * overlap the wash pools darker, and the soft stops keep the edges
-   * from being a rectangle — the two things that separate a
-   * watercolour wash from a flat `background-color`.
+   * A vertical translucent wash stays consistent across inline runs.
+   * Horizontal gradients would restart at each fragment and leave seams.
    *
    * Every layer ends at `rgb(… / 0)` rather than the `transparent`
    * keyword on purpose: `transparent` interpolates through
@@ -464,16 +880,6 @@
    */
   .gloss-mark[data-style="watercolor"] {
     background-image:
-      radial-gradient(
-        130% 90% at 6% 84%,
-        rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 1.3)) 0%,
-        rgb(var(--mark-rgb) / 0) 62%
-      ),
-      radial-gradient(
-        110% 80% at 78% 18%,
-        rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 1.05)) 0%,
-        rgb(var(--mark-rgb) / 0) 55%
-      ),
       linear-gradient(
         rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 0.5)) 0%,
         rgb(var(--mark-rgb) / calc(var(--hl-mark-alpha) * 0.85)) 30%,
@@ -563,3 +969,1151 @@
   color: rgb(var(--accent));
   animation: blink 1s steps(1) infinite;
 }
+
+/* ── Inline paragraph editing ─────────────────────────────────────── */
+
+/* The edit affordance replaces the paragraph number on hover. It sits in the
+ * same gutter as the marker, so it cannot shift the text or any measured
+ * offset; its own label is aria-only (an SVG has no text node), which is why
+ * `rangeToOffsets` can keep subtracting the marker alone. */
+.gloss-edit-trigger {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.25rem;
+  color: rgb(var(--textDim));
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.gloss-prose [data-paragraph-index]:hover > .gloss-edit-trigger,
+.gloss-prose [data-paragraph-index]:focus-within > .gloss-edit-trigger,
+.gloss-edit-trigger:focus-visible {
+  opacity: 1;
+}
+
+.gloss-prose [data-paragraph-index]:hover > [data-paragraph-marker] {
+  opacity: 0;
+}
+
+.gloss-edit-trigger:hover {
+  color: rgb(var(--text));
+}
+
+/* The editing surface keeps the block's gutter and text metrics, so entering
+ * edit mode does not reflow the paragraph being edited. */
+.gloss-edit-block {
+  position: relative;
+  padding-left: var(--reading-gutter);
+}
+
+.gloss-edit-block .gloss-edit-toolbar {
+  position: absolute;
+  right: 0;
+  top: -2.4rem;
+  z-index: 10;
+  opacity: 0.98;
+}
+
+.gloss-edit-surface {
+  outline: none;
+  min-height: 1.5em;
+  caret-color: rgb(var(--accent));
+}
+
+.gloss-edit-surface p {
+  margin: 0;
+}
+
+.gloss-edit-surface p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: rgb(var(--textDim));
+  pointer-events: none;
+}
+
+.gloss-edit-block.gloss-edit-h1 .gloss-edit-surface p { font-size: 1.9rem; font-weight: 600; line-height: 1.3; }
+.gloss-edit-block.gloss-edit-h2 .gloss-edit-surface p { font-size: 1.55rem; font-weight: 600; line-height: 1.35; }
+.gloss-edit-block.gloss-edit-h3 .gloss-edit-surface p { font-size: 1.3rem; font-weight: 600; line-height: 1.4; }
+.gloss-edit-block.gloss-edit-h4 .gloss-edit-surface p,
+.gloss-edit-block.gloss-edit-h5 .gloss-edit-surface p,
+.gloss-edit-block.gloss-edit-h6 .gloss-edit-surface p { font-size: 1.1rem; font-weight: 600; line-height: 1.45; }
+
+.gloss-edit-block.gloss-edit-code .gloss-edit-surface {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9em;
+  background: rgb(var(--border) / 0.35);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Whole-article editing mode. The editor sits where the article body was and
+ * inherits the reading typography; only the contenteditable surface needs
+ * resetting (the browser draws a focus ring on it). */
+.gloss-doc-editor {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1rem 0 6rem;
+}
+
+.gloss-doc-surface {
+  outline: none;
+  min-height: 50vh;
+  caret-color: rgb(var(--accent));
+}
+
+.gloss-doc-surface p:first-child {
+  margin-top: 0;
+}
+
+.gloss-doc-surface .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: rgb(var(--textDim));
+  pointer-events: none;
+}
+
+/* Editor-only nodes: images, tables, task lists and rules must look like the
+ * blocks they become on save. These rules are scoped to the contenteditable
+ * surface so the read view keeps its own `.gloss-*` styling. */
+.gloss-doc-surface img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem auto;
+  border-radius: 0.375rem;
+}
+
+.gloss-doc-surface .ProseMirror-selectednode {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 2px;
+}
+
+.gloss-doc-surface table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.gloss-doc-surface th,
+.gloss-doc-surface td {
+  position: relative;
+  border: 1px solid rgb(var(--border));
+  padding: 0.35rem 0.55rem;
+  vertical-align: top;
+}
+
+.gloss-doc-surface th {
+  background: rgb(var(--border) / 0.35);
+  font-weight: 600;
+}
+
+.gloss-doc-surface ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.gloss-doc-surface ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.gloss-doc-surface ul[data-type="taskList"] > li > label {
+  flex: none;
+  margin-top: 0.3rem;
+}
+
+.gloss-doc-surface ul[data-type="taskList"] > li > div {
+  flex: 1;
+}
+
+.gloss-doc-surface hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid rgb(var(--border));
+}
+
+/* Image blocks (Markdown/HTML `![]()` / `<img>`). Remote URLs only: the
+ * renderer refuses anything that is not http(s) or root-relative, so a stored
+ * `javascript:` source can never become an executable URL. */
+.gloss-figure {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.gloss-figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 0.375rem;
+}
+
+/* Table blocks. Cells are plain text and the table is deliberately outside
+ * the paragraph anchor system (no `data-paragraph-index`), so it cannot carry
+ * a note or highlight. */
+.gloss-table-wrap {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+.gloss-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+.gloss-table th,
+.gloss-table td {
+  border: 1px solid rgb(var(--border));
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.gloss-table th {
+  background: rgb(var(--border) / 0.35);
+  font-weight: 600;
+}
+
+/* Horizontal-rule blocks (`---` / `<hr>`). */
+.gloss-hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid rgb(var(--border));
+}
+
+/* Task-list items. The checkbox is a styled empty span, never a real control
+ * and never generated text: `rangeToOffsets` measures a block with
+ * `Range.toString()`, so anything that adds characters would shift every
+ * highlight in the item. The tick is an SVG background, which contributes no
+ * text either. */
+.gloss-prose li[data-task] {
+  list-style: none;
+}
+
+.gloss-task-box {
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  margin-right: 0.45em;
+  vertical-align: -0.08em;
+  border: 1px solid rgb(var(--textDim) / 0.6);
+  border-radius: 0.2rem;
+}
+
+.gloss-task-box[data-checked="true"] {
+  border-color: rgb(var(--accent));
+  background-color: rgb(var(--accent));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3.2L13 5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 85% 85%;
+}
+
+
+
+
+/* ── Auth card (login / register / forgot) ─────────────────────────
+ * A sheet on a desk: the night page sits a step below the card so the
+ * card has an edge even on a near-black palette. The page tone and card
+ * tone are deliberately local to this surface (`--auth-*`) rather than
+ * global palette changes — the reading pages keep their paper.
+ *
+ * The exact values are a first pass; the palette review is still open.
+ */
+@layer components {
+  .auth-shell {
+    --auth-page: 9 9 8;
+    --auth-card: 30 30 28;
+    --auth-border: 48 48 45;
+    --auth-input: 9 9 8;
+    --auth-dot: 255 255 255;
+    --auth-dot-alpha: 0.16;
+    --auth-halo: 44 39 34;
+    --auth-shadow: 0 30px 80px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.04);
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    min-height: 100dvh;
+    color: rgb(var(--text));
+    background:
+      radial-gradient(820px 460px at 50% -80px, rgb(var(--surface2) / 0.55), transparent 72%),
+      rgb(var(--auth-page));
+  }
+
+  /* The desk behind the card: a dot field (WebGL, interactive) over a static
+     pool of light, masked into a soft ellipse so the card still reads as the
+     only object on the page.
+     
+     When WebGL2 is unavailable the grid is drawn with the CSS texture below
+     instead, so the page never loses its surface. */
+  .auth-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(ellipse 92% 80% at 50% 44%, #000 34%, transparent 100%);
+    mask-image: radial-gradient(ellipse 92% 80% at 50% 44%, #000 34%, transparent 100%);
+  }
+
+  .auth-bg .dot-grid {
+    z-index: 1;
+  }
+
+  /* Fallback texture: one 1px dot per 18px tile, the same density the WebGL
+     grid renders. */
+  .auth-bg:not(.has-gl)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgb(var(--auth-dot) / var(--auth-dot-alpha)) 1px, transparent 1.6px);
+    background-size: 18px 18px;
+    background-position: center;
+  }
+
+  /* The light behind the card is static: it gives the card something to sit
+     on, and the motion lives in the dots. Two octaves (one warm, one neutral)
+     keep it from reading as a colour change. */
+  .auth-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(48% 34% at 50% 42%, rgb(var(--auth-halo) / 0.7), transparent 72%),
+      radial-gradient(36% 26% at 50% 48%, rgb(var(--auth-halo) / 0.4), transparent 76%);
+    /* Opacity only. A moving or scaling pool of light behind a card reads as
+       a smudge; a slow change of brightness reads as ambient light. */
+    animation: auth-halo-breathe 9s ease-in-out infinite alternate;
+  }
+
+  @keyframes auth-halo-breathe {
+    from {
+      opacity: 0.55;
+    }
+    to {
+      opacity: 0.9;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-bg::after {
+      animation: none;
+    }
+  }
+
+  [data-theme="day"] .auth-shell {
+    --auth-page: 243 241 236;
+    --auth-card: 255 255 254;
+    --auth-border: 226 222 214;
+    --auth-input: 250 249 246;
+    --auth-dot: 88 78 60;
+    --auth-dot-alpha: 0.18;
+    --auth-halo: 214 198 168;
+    --auth-shadow: 0 24px 60px rgb(70 60 45 / 0.1), 0 1px 0 rgb(255 255 255 / 0.8) inset;
+  }
+
+  .auth-topbar {
+    position: absolute;
+    z-index: 2;
+    inset: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+  }
+
+  .auth-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: rgb(var(--textDim));
+    text-decoration: none;
+    transition: color 160ms ease;
+  }
+
+  .auth-back:hover {
+    color: rgb(var(--text));
+  }
+
+  .auth-primary,
+  .auth-link,
+  .auth-quiet,
+  .auth-back {
+    touch-action: manipulation;
+  }
+
+  .auth-back svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .auth-center {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 76px 20px 48px;
+  }
+
+  .auth-card {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    /* Centres in the viewport while there is room; collapses to 0 on a short
+       screen (landscape phone, keyboard open) so the card starts at the top
+       and stays scrollable instead of being clipped above it. */
+    margin: auto 0;
+    padding: 32px;
+    overflow: hidden;
+    border: 1px solid rgb(var(--auth-border));
+    border-radius: 16px;
+    background: rgb(var(--auth-card));
+    box-shadow: var(--auth-shadow);
+  }
+
+  .auth-glow {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 72%;
+    height: 88px;
+    transform: translateX(-50%);
+    background: linear-gradient(to bottom, rgb(var(--text) / 0.06), transparent);
+    filter: blur(22px);
+    pointer-events: none;
+  }
+
+  .auth-head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .auth-mark {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 14px;
+    border: 1px solid rgb(var(--auth-border));
+    border-radius: 11px;
+    background: rgb(var(--auth-page));
+    color: rgb(var(--accent));
+    font-family: "Charter", Georgia, "Noto Serif SC", "Source Han Serif SC", "Songti SC", STSong, SimSun, serif;
+    font-size: 21px;
+    line-height: 1;
+  }
+
+  .auth-title {
+    color: rgb(var(--text));
+    font-family: "Charter", Georgia, "Noto Serif SC", "Source Han Serif SC", "Songti SC", STSong, SimSun, serif;
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+  }
+
+  .auth-sub {
+    max-width: 300px;
+    margin-top: 8px;
+    color: rgb(var(--textDim));
+    font-size: 13px;
+    line-height: 1.7;
+    text-wrap: pretty;
+  }
+
+  .auth-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .auth-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 18px;
+    margin-bottom: 7px;
+  }
+
+  .auth-label {
+    color: rgb(var(--textDim));
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+
+  .auth-control {
+    position: relative;
+  }
+
+  .auth-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid rgb(var(--outline));
+    border-radius: 8px;
+    background: rgb(var(--auth-input));
+    color: rgb(var(--text));
+    font-size: 15px;
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .auth-input::placeholder {
+    color: rgb(var(--textDim) / 0.65);
+  }
+
+  .auth-input:hover {
+    border-color: rgb(var(--text) / 0.5);
+  }
+
+  .auth-input:focus {
+    border-color: rgb(var(--accent));
+    box-shadow: 0 0 0 3px rgb(var(--accent) / 0.12);
+  }
+
+  .auth-input.has-prefix {
+    padding-left: 58px;
+  }
+
+  .auth-input.has-eye {
+    padding-right: 44px;
+  }
+
+  .auth-input.is-otp {
+    padding-left: 0.38em;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.38em;
+    text-align: center;
+  }
+
+  .auth-prefix {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: rgb(var(--textDim));
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .auth-prefix i {
+    display: block;
+    width: 1px;
+    height: 16px;
+    background: rgb(var(--border));
+  }
+
+  .auth-eye {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: rgb(var(--textDim));
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: color 160ms ease, background-color 160ms ease;
+  }
+
+  .auth-eye:hover {
+    color: rgb(var(--text));
+    background: rgb(var(--text) / 0.06);
+  }
+
+  .auth-eye svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .auth-hint {
+    margin-top: 6px;
+    color: rgb(var(--textDim));
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .auth-error {
+    margin-top: 6px;
+    color: rgb(var(--accent));
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .auth-field.is-invalid .auth-input {
+    border-color: rgb(var(--accent));
+  }
+
+  .auth-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 24px;
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    color: rgb(var(--accent));
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 160ms ease;
+  }
+
+  .auth-link:hover {
+    opacity: 0.8;
+  }
+
+  .auth-link:disabled {
+    color: rgb(var(--textDim) / 0.72);
+    cursor: not-allowed;
+    opacity: 1;
+  }
+
+  .auth-countdown {
+    color: rgb(var(--textDim));
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .auth-method {
+    display: flex;
+    margin-top: -2px;
+  }
+
+  .auth-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    gap: 8px;
+    width: 100%;
+    height: 46px;
+    margin-top: 6px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: rgb(var(--text));
+    color: rgb(var(--bg));
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: opacity 160ms ease, transform 120ms ease;
+  }
+
+  .auth-primary:hover {
+    opacity: 0.88;
+  }
+
+  .auth-primary:active {
+    transform: translateY(1px);
+  }
+
+  .auth-primary:focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+  }
+
+  .auth-primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .auth-arrow {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .auth-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgb(var(--bg) / 0.3);
+    border-top-color: rgb(var(--bg));
+    border-radius: 50%;
+    animation: auth-spin 0.7s linear infinite;
+  }
+
+  @keyframes auth-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .auth-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid rgb(var(--border));
+    color: rgb(var(--textDim));
+    font-size: 12.5px;
+  }
+
+  .auth-footer a {
+    color: rgb(var(--accent));
+    text-decoration: none;
+  }
+
+  .auth-footer a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .auth-quiet {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: rgb(var(--textDim));
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: color 160ms ease;
+  }
+
+  .auth-quiet:hover {
+    color: rgb(var(--text));
+  }
+
+  .auth-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-bottom: 16px;
+    padding: 11px 13px;
+    border: 1px solid rgb(var(--accent) / 0.3);
+    border-radius: 8px;
+    background: rgb(var(--accent) / 0.08);
+    color: rgb(var(--accent));
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .auth-banner svg {
+    flex: none;
+    width: 15px;
+    height: 15px;
+    margin-top: 2px;
+  }
+
+  .auth-strength {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .auth-strength i {
+    flex: 1;
+    height: 2px;
+    border-radius: 2px;
+    background: rgb(var(--border));
+  }
+
+  .auth-strength i.on {
+    background: rgb(var(--text) / 0.45);
+  }
+
+  .auth-success {
+    margin-top: 8px;
+    color: rgb(var(--text));
+    font-size: 14px;
+    line-height: 1.9;
+  }
+
+  .auth-success p {
+    margin: 0;
+  }
+
+  .auth-accent {
+    color: rgb(var(--accent));
+  }
+
+  .auth-success .auth-primary {
+    margin-top: 20px;
+  }
+
+  .auth-success-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid rgb(var(--border));
+    font-size: 12.5px;
+  }
+
+  .auth-success-actions a {
+    color: rgb(var(--textDim));
+    text-decoration: none;
+  }
+
+  .auth-success-actions a:hover {
+    color: rgb(var(--text));
+  }
+
+  @media (max-width: 480px) {
+    .auth-topbar {
+      padding: 10px 16px;
+    }
+
+    /* The card centres itself with `margin: auto`; on a phone the padding
+       only needs to clear the topbar. */
+    .auth-center {
+      padding: 64px 16px 28px;
+    }
+
+    .auth-card {
+      padding: 24px;
+      border-radius: 14px;
+    }
+
+    /* Touch targets: the drawn size stays, the hit box grows. */
+    .auth-back {
+      padding: 13px 8px;
+      margin: -13px -8px;
+    }
+
+    .auth-topbar button {
+      min-width: 44px;
+      min-height: 44px;
+      margin: -8px -8px -8px 0;
+    }
+
+    .auth-footer a,
+    .auth-footer button {
+      padding: 7px 2px;
+      margin: -7px -2px;
+      touch-action: manipulation;
+    }
+
+    .auth-title {
+      font-size: 24px;
+    }
+
+    .auth-input {
+      /* iOS zooms the page when a focused control is under 16px. */
+      font-size: 16px;
+    }
+
+    .auth-footer {
+      gap: 12px;
+    }
+  }
+}
+
+/* ── View transitions: library card ⇄ reader header ─────────────────────
+ *
+ * The shared elements are named in `lib/view-transition.ts` and applied by
+ * `<ViewTransition>` in `components/post-list.tsx` (shell / cover / title per
+ * card) and in `pages/Reader.tsx` (the article header card).
+ *
+ * `view-transition-class` (the `(.vt-move)` argument below) is what lets
+ * React pass class names — `vt-move`, `vt-expand`, `vt-cover`, `vt-text`,
+ * `vt-blur`, `vt-quick` — to the transition pseudo-elements. Browsers without
+ * it still run the transition; they just use the default cross-fade, so
+ * nothing here is load-bearing for navigation.
+ *
+ * Timings are theme-independent and respect reduced motion. `vt-quick` exists
+ * because the return trip (reader → list) should not feel as long as opening
+ * an article: the eye has already seen the destination.
+ */
+:root {
+  /* The page itself never gets a snapshot; only the named shared elements
+   * do. Without this the whole viewport cross-fades behind the morph. */
+  view-transition-name: none;
+  --vt-move: 420ms;
+  --vt-enter: 210ms;
+  --vt-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --vt-ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --vt-radius: 18px;
+  --vt-surface: rgb(var(--surface));
+  --vt-ring: rgb(var(--border));
+}
+
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(.vt-move) {
+  animation-duration: var(--vt-move);
+  animation-timing-function: var(--vt-ease);
+}
+
+::view-transition-group(.vt-quick) {
+  animation-duration: var(--vt-enter);
+}
+::view-transition-old(.vt-quick),
+::view-transition-new(.vt-quick) {
+  animation-duration: var(--vt-enter);
+  animation-delay: 0s;
+}
+
+/* The article surface: card geometry grows into the reader's header card. */
+::view-transition-group(.vt-expand) {
+  background: var(--vt-surface);
+  border-radius: var(--vt-radius);
+  box-shadow: 0 0 0 1px var(--vt-ring);
+}
+::view-transition-image-pair(.vt-expand) {
+  overflow: clip;
+  border-radius: var(--vt-radius);
+  isolation: isolate;
+}
+::view-transition-old(.vt-expand),
+::view-transition-new(.vt-expand) {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+::view-transition-old(.vt-expand) {
+  animation: 250ms var(--vt-ease-out) both vt-blur-out;
+}
+::view-transition-new(.vt-expand) {
+  animation: 250ms var(--vt-ease-out) both vt-blur-in;
+}
+::view-transition-old(.vt-expand):only-child,
+::view-transition-new(.vt-expand):only-child {
+  mix-blend-mode: normal;
+}
+::view-transition-old(.vt-expand),
+::view-transition-new(.vt-expand) {
+  mix-blend-mode: plus-lighter;
+}
+
+/* The cover tile: a square thumbnail becomes a wide banner, clipped as it
+ * grows. `vt-cover` only sets the clip radius; the geometry comes from the
+ * shared group. */
+::view-transition-image-pair(.vt-cover) {
+  overflow: clip;
+  border-radius: var(--vt-radius);
+  isolation: isolate;
+}
+::view-transition-old(.vt-cover),
+::view-transition-new(.vt-cover) {
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The title: keep the glyphs at their natural size while the box moves, so
+ * the headline reads as text rather than a stretched bitmap. */
+::view-transition-old(.vt-text),
+::view-transition-new(.vt-text) {
+  height: 100%;
+  width: auto;
+  object-fit: none;
+  object-position: left top;
+}
+
+/* List enter/exit: a short blur so switching pages has a direction without an
+ * elaborate slide. `vt-blur` is used by `PostList`'s wrapper. */
+::view-transition-group(.vt-blur) {
+  animation: none;
+}
+::view-transition-old(.vt-blur),
+::view-transition-new(.vt-blur) {
+  width: auto;
+  height: auto;
+  left: 50%;
+  translate: -50% 0;
+}
+::view-transition-old(.vt-blur) {
+  animation: 250ms var(--vt-ease-out) both vt-blur-leave;
+}
+::view-transition-new(.vt-blur) {
+  animation: 250ms var(--vt-ease-out) both vt-blur-in;
+}
+::view-transition-image-pair(.vt-blur) {
+  isolation: isolate;
+}
+::view-transition-old(.vt-blur),
+::view-transition-new(.vt-blur) {
+  mix-blend-mode: plus-lighter;
+}
+::view-transition-old(.vt-blur):only-child,
+::view-transition-new(.vt-blur):only-child {
+  mix-blend-mode: normal;
+}
+
+@keyframes vt-blur-out {
+  to {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+@keyframes vt-blur-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+@keyframes vt-blur-leave {
+  40% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-image-pair(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+  ::view-transition-old(*) {
+    animation: 150ms var(--vt-ease-out) both vt-dissolve-out !important;
+  }
+  ::view-transition-new(*) {
+    animation: 150ms var(--vt-ease-out) both vt-dissolve-in !important;
+  }
+}
+@keyframes vt-dissolve-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-dissolve-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Header menu + settings accordion ─────────────────────────────────────
+ * Motion from transitions.dev, pasted from its snippets:
+ *
+ *   - `.t-dropdown` (Menu dropdown): grows from the trigger, origin-aware,
+ *     250ms open / 150ms close. `is-closing` is a separate class so the next
+ *     open starts from the resting scale instead of the closing one.
+ *   - `.t-acc` (Accordion expand): height animates through
+ *     `grid-template-rows: 0fr ↔ 1fr`, so no JS measurement; the chevron
+ *     flips with scaleY instead of morphing its `d` path (Chromium-only).
+ *
+ * The variables are the per-snippet `:root` blocks, kept here rather than
+ * spread across files. Do not rename them: the snippets and their React
+ * orchestration read these names.
+ * ─────────────────────────────────────────────────────────────────────── */
+:root {
+  --dropdown-open-dur: 250ms;
+  --dropdown-close-dur: 150ms;
+  --dropdown-pre-scale: 0.97;
+  --dropdown-closing-scale: 0.99;
+  --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --acc-expand: 250ms;
+  --acc-collapse: 250ms;
+  --acc-chevron: 250ms;
+  --acc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.t-dropdown {
+  transform-origin: top left;
+  transform: scale(var(--dropdown-pre-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--dropdown-open-dur) var(--dropdown-ease),
+    opacity var(--dropdown-open-dur) var(--dropdown-ease);
+  will-change: transform, opacity;
+}
+.t-dropdown[data-origin="top-right"] { transform-origin: top right; }
+.t-dropdown[data-origin="top-center"] { transform-origin: top center; }
+.t-dropdown[data-origin="bottom-left"] { transform-origin: bottom left; }
+.t-dropdown[data-origin="bottom-center"] { transform-origin: bottom center; }
+.t-dropdown[data-origin="bottom-right"] { transform-origin: bottom right; }
+
+.t-dropdown.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.t-dropdown.is-closing {
+  transform: scale(var(--dropdown-closing-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--dropdown-close-dur) var(--dropdown-ease),
+    opacity var(--dropdown-close-dur) var(--dropdown-ease);
+}
+
+.t-acc-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--acc-collapse) var(--acc-ease);
+}
+.t-acc[data-open="true"] .t-acc-panel {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--acc-expand) var(--acc-ease);
+}
+.t-acc-panel-inner {
+  overflow: hidden;
+  opacity: 0;
+  filter: blur(2px);
+  transition:
+    opacity var(--acc-collapse) var(--acc-ease),
+    filter var(--acc-collapse) var(--acc-ease);
+}
+.t-acc[data-open="true"] .t-acc-panel-inner {
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    opacity var(--acc-expand) var(--acc-ease),
+    filter var(--acc-expand) var(--acc-ease);
+}
+.t-acc-chevron {
+  display: inline-flex;
+  transform: scaleY(1);
+  transform-origin: center;
+  transition: transform var(--acc-chevron) var(--acc-ease);
+}
+.t-acc-chevron path { vector-effect: non-scaling-stroke; }
+.t-acc[data-open="true"] .t-acc-chevron {
+  transform: scaleY(-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-dropdown { transition: none !important; }
+  .t-acc-panel, .t-acc-panel-inner, .t-acc-chevron {
+    transition: none !important;
+  }
+}
+
+

@@ -31,24 +31,11 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { createServer } from 'node:http';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
-import { evidenceDir, repoRoot } from '../scripts/evidence-dir.mjs';
 
 const REPLY = '浏览器直连你好';
-
-// Evidence goes to `artifacts/byok-browser/` (gitignored) by default, or to
-// `EVIDENCE_DIR` when set — see `scripts/evidence-dir.mjs`.
-const EVIDENCE = evidenceDir('byok-browser');
-
-// The blank page has to be served *by Vite* so the suite shares Vite's origin
-// and can import the app's real modules. That makes it a fixture rather than
-// evidence, so it lives under the gitignored `artifacts/` directory inside the
-// repository root — a directory outside the Vite root could not be served.
-const FIXTURE_DIR = path.join(repoRoot, 'artifacts', 'byok');
-const BLANK_FIXTURE_URL = 'artifacts/byok/blank.html';
 
 // ── fake OpenAI-compatible vendors ───────────────────────────────────────
 // Kept inline (plain JS) rather than reusing tests/unit/byok-fake-provider.ts
@@ -219,19 +206,9 @@ const vendors = [];
 try {
   const port = await freePort();
   const url = `http://127.0.0.1:${port}`;
-  // Vite's root is a positional argument, and both it and the binary are
-  // resolved from the repository root rather than from `cwd`, so the blank
-  // fixture above is reachable at `BLANK_FIXTURE_URL` no matter where the
-  // suite was launched from.
   vite = spawn(
     process.execPath,
-    [
-      path.join(repoRoot, 'node_modules/vite/bin/vite.js'),
-      repoRoot,
-      '--host', '127.0.0.1',
-      '--port', String(port),
-      '--strictPort',
-    ],
+    ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
     { stdio: 'ignore', windowsHide: true },
   );
   let ready = false;
@@ -259,7 +236,7 @@ try {
 
   browser = await chromium.launch({
     headless: true,
-    ...(process.env.READER_CHROME_PATH ? { executablePath: process.env.READER_CHROME_PATH } : {}),
+    ...(process.env.GLOSS_CHROME_PATH ? { executablePath: process.env.GLOSS_CHROME_PATH } : {}),
   });
   // A blank page served *by Vite*, so the suite shares Vite's origin without
   // booting the reader. It is generated here rather than checked in, and it
@@ -271,16 +248,16 @@ try {
   // preflights, which would quietly turn the cross-origin assertions below
   // into fictions. (Verified against a bare probe server: a route makes the
   // browser send the POST alone; without it, OPTIONS then POST.)
-  await mkdir(FIXTURE_DIR, { recursive: true });
+  await mkdir('artifacts/byok', { recursive: true });
   await writeFile(
-    path.join(FIXTURE_DIR, 'blank.html'),
+    'artifacts/byok/blank.html',
     '<!doctype html><html><head><meta charset="utf-8"><title>byok-blank</title></head><body></body></html>',
   );
   const context = await browser.newContext({ viewport: { width: 1024, height: 800 } });
   const page = await context.newPage();
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
-  await page.goto(`${url}/${BLANK_FIXTURE_URL}`);
+  await page.goto(`${url}/artifacts/byok/blank.html`);
   await page.waitForFunction(() => document.title === 'byok-blank');
 
   const results = {};
@@ -504,12 +481,19 @@ try {
   // provider `<select>` was the same bypass with one click and no prompt at
   // all.
 
-  const dialogs = { count: 0, mode: 'dismiss' };
-  page.on('dialog', async (dialog) => {
-    dialogs.count += 1;
-    if (dialogs.mode === 'accept') await dialog.accept();
-    else await dialog.dismiss();
-  });
+  // The panel now asks with an in-app dialog (`window.confirm` is gone), so
+  // the harness answers it by clicking the dialog's own buttons. The dialog
+  // is rendered inside the mount host because the modal does not portal.
+  let promptCount = 0;
+  const confirmDialog = page.locator('#byok-settings-host [role="dialog"]');
+  async function answerConfirm(accept) {
+    await confirmDialog.waitFor();
+    promptCount += 1;
+    await confirmDialog
+      .getByRole('button', { name: accept ? '确定' : '取消' })
+      .click();
+    await confirmDialog.waitFor({ state: 'detached' });
+  }
 
   await page.evaluate(`(async () => {
     const mount = await import('/tests/byok-panel-mount.tsx');
@@ -530,7 +514,7 @@ try {
   const modelInput = host.locator('input[type="text"]').nth(1);
   const keyInput = host.locator('input[type="password"]');
   const rememberBox = host.locator('input[type="checkbox"]');
-  const providerSelect = host.locator('select');
+  const providerCombobox = host.getByRole('combobox', { name: '模型服务商' });
   assert.equal(await modelInput.count(), 1, 'the address and model fields are both present');
 
   const panelState = () =>
@@ -544,30 +528,31 @@ try {
     })()`);
 
   // 8. typing an address must not prompt; committing it must — once
-  dialogs.mode = 'dismiss';
-  dialogs.count = 0;
+  promptCount = 0;
   await urlInput.click();
   await urlInput.selectText();
   await urlInput.pressSequentially(decoy.baseURL, { delay: 5 });
   assert.equal(
-    dialogs.count,
+    promptCount,
     0,
     'typing must not raise a dialog per keystroke — that is what taught users to dismiss it',
   );
+  assert.equal(await confirmDialog.count(), 0, 'and no dialog is mounted while typing');
   await urlInput.blur();
-  assert.equal(dialogs.count, 1, 'committing a new origin asks exactly once');
+  await answerConfirm(false);
+  assert.equal(promptCount, 1, 'committing a new origin asks exactly once');
   const afterDismiss = await panelState();
   assert.equal(afterDismiss.baseURL, selected.baseURL, 'declining keeps the old endpoint');
   assert.equal(afterDismiss.confirmedOrigin, selected.origin);
   assert.equal(await urlInput.inputValue(), selected.baseURL, 'and the field reverts');
 
-  dialogs.mode = 'accept';
-  dialogs.count = 0;
+  promptCount = 0;
   await urlInput.click();
   await urlInput.selectText();
   await urlInput.pressSequentially(decoy.baseURL, { delay: 5 });
   await urlInput.blur();
-  assert.equal(dialogs.count, 1);
+  await answerConfirm(true);
+  assert.equal(promptCount, 1);
   const afterAccept = await panelState();
   assert.equal(afterAccept.baseURL, decoy.baseURL, 'accepting moves the endpoint');
   assert.equal(
@@ -577,16 +562,18 @@ try {
   );
 
   // 9. switching the provider preset asks too
-  dialogs.mode = 'dismiss';
-  dialogs.count = 0;
-  await providerSelect.selectOption('openai');
-  assert.equal(dialogs.count, 1, 'a preset swap moves the endpoint, so it must ask');
+  promptCount = 0;
+  await providerCombobox.click();
+  await host.getByRole('option', { name: 'OpenAI', exact: true }).click();
+  await answerConfirm(false);
+  assert.equal(promptCount, 1, 'a preset swap moves the endpoint, so it must ask');
   assert.equal((await panelState()).provider, 'deepseek', 'declined ⇒ nothing changed');
 
-  dialogs.mode = 'accept';
-  dialogs.count = 0;
-  await providerSelect.selectOption('openai');
-  assert.equal(dialogs.count, 1);
+  promptCount = 0;
+  await providerCombobox.click();
+  await host.getByRole('option', { name: 'OpenAI', exact: true }).click();
+  await answerConfirm(true);
+  assert.equal(promptCount, 1);
   const afterProvider = await panelState();
   assert.equal(afterProvider.provider, 'openai');
   assert.equal(
@@ -612,23 +599,22 @@ try {
   assert.equal(await banner.count(), 0);
 
   // 11. remembering the key is opt-in, and unticking removes the stored copy
-  dialogs.mode = 'dismiss';
-  dialogs.count = 0;
+  promptCount = 0;
   // `click()`, not `check()`: the declined case deliberately leaves the box
   // unchecked, and `check()` would wait for a state that never arrives.
   await rememberBox.click();
-  assert.equal(dialogs.count, 1, 'storing a key on this machine needs an explicit yes');
+  await answerConfirm(false);
+  assert.equal(promptCount, 1, 'storing a key on this machine needs an explicit yes');
   assert.equal((await panelState()).rememberKey, false, 'declined ⇒ nothing stored');
 
-  dialogs.mode = 'accept';
-  dialogs.count = 0;
   await rememberBox.click();
-  assert.equal(dialogs.count, 1);
+  await answerConfirm(true);
   const remembered = await panelState();
   assert.equal(remembered.rememberKey, true);
   assert.equal(remembered.stored.apiKey, 'sk-panel-key', 'accepted ⇒ the key is on this machine');
 
   await rememberBox.click();
+  assert.equal(await confirmDialog.count(), 0, 'unticking is not a question');
   const unremembered = await panelState();
   assert.equal(unremembered.rememberKey, false);
   assert.equal(unremembered.stored.apiKey, '', 'unticking removes the stored copy');
@@ -647,9 +633,9 @@ try {
 
   assert.deepEqual(pageErrors, [], 'the page must not raise uncaught errors');
 
-  await mkdir(EVIDENCE, { recursive: true });
+  await mkdir('artifacts/byok', { recursive: true });
   await writeFile(
-    path.join(EVIDENCE, 'browser.json'),
+    'artifacts/byok/browser.json',
     JSON.stringify(
       {
         pass: true,
@@ -683,7 +669,7 @@ try {
           echo: echo.requests.length,
         },
         scenarios: results,
-        panelDialogs: dialogs.count,
+        panelPrompts: promptCount,
       },
       null,
       2,

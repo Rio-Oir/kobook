@@ -49,7 +49,15 @@
 import type { Paragraph } from "./types";
 
 /** The block kinds the parse layer emits. */
-export type BlockKind = "heading" | "paragraph" | "listItem" | "code" | "quote";
+export type BlockKind =
+  | "heading"
+  | "paragraph"
+  | "listItem"
+  | "code"
+  | "quote"
+  | "image"
+  | "table"
+  | "hr";
 
 /**
  * The kind to render a paragraph as.
@@ -84,6 +92,78 @@ export function headingTag(level: number | undefined): `h${2 | 3 | 4 | 5 | 6}` {
 }
 
 /**
+ * How wide a title is, in the units the size steps below are counted in.
+ *
+ * A Chinese character occupies a full em; a Latin letter, digit or
+ * half-width punctuation occupies roughly half of one. Counting raw
+ * characters would therefore read a 20-character Chinese title as
+ * "short" — the same number that describes a 20-character English
+ * title, which is a whole sentence — and give it the largest step.
+ * Counting in ems puts the two scripts on one scale, so the thresholds
+ * are the same numbers a Latin-only reader would have chosen.
+ *
+ * This approximates Unicode's East Asian Width property rather than
+ * implementing it: it covers the blocks an article title actually uses
+ * (Han, kana, Hangul, CJK punctuation, full-width forms) and treats
+ * everything else as half-width. An emoji or a rare script is therefore
+ * counted as narrow, which can put a title one step larger than it
+ * deserves — a wrong step, not a broken layout.
+ */
+function titleWidth(title: string): number {
+  let units = 0;
+  for (const char of title) {
+    units += isFullWidth(char.codePointAt(0)!) ? 2 : 1;
+  }
+  return units;
+}
+
+/** East Asian Wide / Fullwidth, near enough for measuring a title. */
+function isFullWidth(code: number): boolean {
+  return (
+    (code >= 0x1100 && code <= 0x115f) || // Hangul Jamo
+    (code >= 0x2e80 && code <= 0x303f) || // CJK radicals, Kangxi, CJK punctuation
+    (code >= 0x3041 && code <= 0x33ff) || // kana, Bopomofo, enclosed and compat CJK
+    (code >= 0x3400 && code <= 0x4dbf) || // CJK Extension A
+    (code >= 0x4e00 && code <= 0x9fff) || // CJK Unified Ideographs
+    (code >= 0xa000 && code <= 0xa4cf) || // Yi
+    (code >= 0xac00 && code <= 0xd7a3) || // Hangul syllables
+    (code >= 0xf900 && code <= 0xfaff) || // CJK Compatibility Ideographs
+    (code >= 0xfe30 && code <= 0xfe6f) || // CJK Compatibility Forms
+    (code >= 0xff00 && code <= 0xff60) || // Fullwidth Forms
+    (code >= 0xffe0 && code <= 0xffe6) || // Fullwidth signs
+    (code >= 0x20000 && code <= 0x3fffd) //  CJK Extension B and beyond
+  );
+}
+
+/**
+ * The display size of the article title, as a function of its length.
+ *
+ * A fixed `text-5xl` is a size chosen for the shortest title that will
+ * ever use it. The reader imports titles of every length, and a Chinese
+ * title runs long by nature — 30 characters is an ordinary headline, not
+ * an outlier — so at a fixed size a long one wraps to four lines and
+ * takes the whole first screen before the article has started. Stepping
+ * the size down as the title grows keeps a long title from towering
+ * while leaving a short one exactly as large as it is today.
+ *
+ * The largest step is the current desktop size (`text-5xl`, 3rem) and
+ * the smallest is 1.5rem, so this only ever moves a title *down* from
+ * where it sits now. Each step is a `clamp()` so the size still tracks
+ * the viewport between the phone and desktop ends.
+ *
+ * The returned string is size and leading only. `text-balance` is set on
+ * the element itself, because balancing line lengths is a property of
+ * the heading and not part of "how big is this title".
+ */
+export function titleSizeClass(title: string): string {
+  const width = titleWidth(title);
+  if (width <= 26) return "text-[clamp(2.25rem,4vw,3rem)] leading-[1.15]";
+  if (width <= 50) return "text-[clamp(2rem,3.4vw,2.6rem)] leading-[1.2]";
+  if (width <= 90) return "text-[clamp(1.75rem,3vw,2.2rem)] leading-[1.25]";
+  return "text-[clamp(1.5rem,2.6vw,1.9rem)] leading-[1.3]";
+}
+
+/**
  * One unit of rendering: either a standalone block, or a run of
  * consecutive list items that must share a single `<ul>`/`<ol>`.
  *
@@ -103,7 +183,7 @@ export type BlockGroup =
   | { kind: "list"; ordered: boolean; items: Paragraph[] };
 
 /** Split a flat paragraph list into renderable groups. */
-export function groupBlocks(paragraphs: Paragraph[]): BlockGroup[] {
+export function groupBlocks(paragraphs: readonly Paragraph[]): BlockGroup[] {
   const groups: BlockGroup[] = [];
   for (const paragraph of paragraphs) {
     if (blockKindOf(paragraph) !== "listItem") {
@@ -151,7 +231,7 @@ export type OutlineEntry = {
  * an empty panel, which is the honest presentation of a genuinely flat
  * document.
  */
-export function outlineOf(paragraphs: Paragraph[]): OutlineEntry[] {
+export function outlineOf(paragraphs: readonly Paragraph[]): OutlineEntry[] {
   const entries: OutlineEntry[] = [];
   for (let i = 0; i < paragraphs.length; i++) {
     const paragraph = paragraphs[i]!;

@@ -16,8 +16,8 @@
  * What we block, with the reason each rule is in the list:
  *   - any non-`http(s)` scheme: file://, gopher://, javascript:,
  *     data:, ftp://, dict://, ldap://, etc. are all either file reads,
- *     SSRF amplifiers, or browser-side attacks. Only http and https are
- *     importable.
+ *     SSRF amplifiers, or browser-side attacks. The plan says "http /
+ *     https only".
  *   - 127.0.0.0/8, ::1: loopback. The attacker can read anything bound
  *     to localhost on the server (Redis, internal admin pages, debug
  *     ports). Always 127.0.0.0/8, not just "127.0.0.1".
@@ -223,4 +223,102 @@ export async function gateUrl(rawUrl: string): Promise<{ url: URL; address: stri
   const parsed = parseUrl(rawUrl);
   const address = await resolvePublicAddress(parsed.hostname);
   return { url: parsed, address };
+}
+
+// ── Proxy-path gating ─────────────────────────────────────────────────────
+//
+// A deployment whose direct egress is tampered with cannot use the strict
+// gate as an admission test for the *proxy* path: the answers it sees are
+// garbage (measured here: `kevinkelly.substack.com` → a Dropbox address or a
+// Teredo tunnel, `medium.com` → a Twitter address), and every one of them is
+// "not public", so the strict gate refuses a perfectly ordinary article.
+//
+// The proxy resolves the name itself, so what still matters is only the
+// question the proxy path can actually get wrong: *is this name pointing into
+// the operator's own network?* That is a narrower set of ranges than
+// `isPublicAddress` refuses — loopback, RFC 1918, link-local, CGNAT, ULA,
+// unspecified, and IPv4-mapped/6to4 forms that hide one of those. Teredo and
+// other tunnel/documentation addresses are refused as *direct destinations*
+// but carry no SSRF meaning, so they do not disqualify a name here.
+
+/** Ranges that mean "this is inside the operator's network", not "unroutable". */
+export function isInternalAddress(addr: string): boolean {
+  if (isIP(addr) === 0) return true;
+
+  if (addr.includes(".") && !addr.includes(":")) {
+    const parts = addr.split(".").map((p) => Number.parseInt(p, 10));
+    if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) return true;
+    const [a, b] = parts as [number, number, number, number];
+    if (a === 0 || a === 10 || a === 127) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    return false;
+  }
+
+  if (!addr.includes(":")) return true;
+  if (addr.includes("%")) return true;
+  let lower: string;
+  try {
+    lower = new URL(`http://[${addr}]/`).hostname.slice(1, -1);
+  } catch {
+    return true;
+  }
+  if (lower === "::" || lower === "::1") return true;
+  // IPv4-mapped / translated forms: re-check the embedded address.
+  if (lower.startsWith("::ffff:")) return isInternalAddress(lower.slice("::ffff:".length));
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
+  if (lower.startsWith("fe80:")) return true;
+  if (lower.startsWith("2002:")) {
+    const hex = lower.slice(5).split(":");
+    if (hex.length >= 2) {
+      const hi = Number.parseInt(hex[0]!, 16);
+      const lo = Number.parseInt(hex[1]!, 16);
+      if (Number.isFinite(hi) && Number.isFinite(lo)) {
+        return isInternalAddress(`${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`);
+      }
+    }
+    return false;
+  }
+  return false;
+}
+
+/** Hostname suffixes that only ever name something inside a network. */
+const INTERNAL_SUFFIXES = [".localhost", ".local", ".internal", ".home.arpa", ".lan", ".intranet"] as const;
+
+/**
+ * Throws `SsrfBlockedError` when `hostname` names a host inside the operator's
+ * network — the only SSRF question the proxy path can still get wrong, since
+ * the proxy resolves the name and the local answer is not trustworthy here.
+ *
+ * The policy is intentionally hostname-first: a literal private IP, a
+ * single-label name (`redis`, `metadata`), or one of the internal suffixes is
+ * refused without touching DNS, and a lookup that yields an internal address
+ * refuses the name wholesale.
+ */
+export async function assertProxyEligibleHostname(hostname: string): Promise<void> {
+  const host = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  if (isIP(host) !== 0) {
+    if (isInternalAddress(host)) {
+      throw new SsrfBlockedError(`目标地址 ${host} 不在公网范围内。`);
+    }
+    return;
+  }
+  if (!host.includes(".") || INTERNAL_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
+    throw new SsrfBlockedError(`目标 ${host} 看起来是内网地址，拒绝通过代理访问。`);
+  }
+  let addresses: Array<{ address: string }>;
+  try {
+    addresses = await dnsLookup(host, { all: true, verbatim: true });
+  } catch (err) {
+    // Unresolvable locally is not disqualifying: the proxy does its own
+    // resolution, and on a tampered resolver this says nothing about the name.
+    return;
+  }
+  for (const { address } of addresses) {
+    if (isInternalAddress(address)) {
+      throw new SsrfBlockedError(`目标 ${host} 解析到内网地址 ${address}。`);
+    }
+  }
 }

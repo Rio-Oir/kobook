@@ -5,27 +5,28 @@
 
 /**
  * Channel 1: the browser fetches `r.jina.ai` directly, then parses the
- * returned Markdown locally. This is the *preferred* path — the browser is
- * the one that tries Jina first — and when it succeeds the backend is never
- * called.
+ * returned Markdown locally. This is the *preferred* path — the plan's
+ * "浏览器直连 Jina 优先" — and when it succeeds the backend is never called.
  *
  * Three properties are structural rather than conventional, because a
  * convention is exactly what a later edit breaks:
  *
  * 1. **The Jina address is not a parameter.** `JINA_READER_BASE` is a module
- *    constant and no option, argument or environment value can replace it. A
- *    browser cannot be trusted to name its own proxy, so the ability is
- *    removed rather than validated. Tests point at a local fake by **injecting
- *    `fetch`**, which is a seam on the transport, not on the destination — the
- *    module still builds the same `https://r.jina.ai/...` URL and a test double
- *    decides what to do with it.
+ *    constant and no option, argument or environment value can replace it. The
+ *    plan requires it ("浏览器不得提交任意代理或抓取服务地址"); a browser cannot
+ *    be trusted to name its own proxy, so the ability is removed rather than
+ *    validated. Tests point at a local fake by **injecting `fetch`**, which is
+ *    a seam on the transport, not on the destination — the module still builds
+ *    the same `https://r.jina.ai/...` URL and a test double decides what to do
+ *    with it.
  * 2. **The request is bounded twice.** A 10 s deadline and a 5 MB byte
  *    cap. The byte cap is enforced *while reading* rather than by
  *    checking a `Content-Length`, because an upstream is free to send a
  *    small header and then stream forever. (The deadline used to be
- *    described as "matching `JINA_TIMEOUT_MS` on the server"; the server
- *    makes no Jina request at all, so there is no server-side value left
- *    to match. The 10 s is now simply this module's own bound.)
+ *    described as "matching `JINA_TIMEOUT_MS` on the server"; since
+ *    2026-10-15 the server makes no Jina request at all, so there is no
+ *    server-side value left to match. The 10 s is now simply this
+ *    module's own bound.)
  * 3. **Cancellation is terminal.** An abort from the caller returns
  *    `cancelled` and is marked not-fallback-eligible, so an orchestration layer
  *    cannot turn "the user navigated away" into a second HTTP request against
@@ -42,16 +43,16 @@ import {
  * The Jina Reader endpoint. A constant on purpose — see the module note.
  *
  * Trailing slash matters: the target URL is appended verbatim, so
- * `https://r.jina.ai/https://example.com/` is what reaches the service — the
- * same shape the server's import resolver builds for the Markdown it is
- * handed back.
+ * `https://r.jina.ai/https://example.com/` is what reaches the service, the
+ * same shape `server/src/lib/url-import.ts` builds from its operator-configured
+ * base.
  */
 export const JINA_READER_BASE = "https://r.jina.ai/";
 
-/** Bounded deadline for the direct channel. */
+/** Bounded deadline for the direct channel. Mirrors the server's Jina timeout. */
 export const JINA_DEADLINE_MS = 10_000;
 
-/** Hard cap on bytes read from the response body. */
+/** Hard cap on bytes read from the response body. Mirrors the server's cap. */
 export const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 
 export interface JinaFetchOptions extends FailureContext {

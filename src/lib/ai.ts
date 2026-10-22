@@ -13,7 +13,7 @@
 // spending the departed user's key and continues to call `appendToNote` on a
 // note the next account will never see.
 //
-// The stream's *end states* are made honest:
+// Phase 4 makes the stream's *end states* honest:
 //
 //   - it iterates `fullStream`, not `textStream`. `textStream` forwards only
 //     `text-delta` parts and silently drops `{ type: "error" }`, so a
@@ -93,7 +93,17 @@ export type StreamChatOptions = {
  */
 export const DEFAULT_STREAM_TIMEOUT_MS = 60_000;
 
-function getActiveModel() {
+/**
+ * The active BYOK model, or `null` when no key is configured.
+ *
+ * Exported for the background tagger (`lib/tagging.ts`), which needs the
+ * same provider/key/endpoint rules as a chat stream — in particular the
+ * "key only travels to a confirmed endpoint" refusal — without duplicating
+ * them. It throws for a configured-but-unconfirmed endpoint exactly like
+ * `streamChat`, so the tagger fails closed rather than sending a key
+ * somewhere the user has not approved.
+ */
+export function getActiveModel() {
   const s = readSettings();
   if (!s.apiKey) return null;
   validateSettings({ apiKey: s.apiKey, baseURL: s.baseURL, model: s.model });

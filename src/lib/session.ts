@@ -6,21 +6,21 @@
 /**
  * The session store.
  *
- * The *question* — is anyone signed in, and whose cache is on screen — is a
- * property of the local data model (see `ownership.ts`). The *answer* is not:
- * resolving a session is an HTTP call to an account service, so it is
- * delegated to the optional cloud adapter.
+ * Base owns this because the *question* — is anyone signed in, and whose cache
+ * is on screen — is a property of the local data model (see `ownership.ts`).
+ * Base does not own the *answer*: resolving a session is an HTTP call to an
+ * account service, so it is delegated to the optional cloud adapter.
  *
- * With no adapter installed — the default — `refresh()` settles on `anon`
- * without opening a socket. That is deliberate and load-bearing: it is what
- * makes "this build makes no cloud request on load" a property of the module
- * graph rather than of a runtime flag. The status still moves out of
- * `loading`, so nothing downstream is left waiting on a probe that will never
- * come.
+ * With no adapter installed — the default, and the only state a base release
+ * can be in — `refresh()` settles on `anon` without opening a socket. That is
+ * deliberate and load-bearing: it is what makes "a base build makes no cloud
+ * request on load" a property of the module graph rather than of a runtime
+ * flag. The status still moves out of `loading`, so nothing downstream is left
+ * waiting on a probe that will never come.
  *
- * `AbortController` bookkeeping is standard: `refresh` aborts any in-flight
- * probe before starting a new one, so React StrictMode's double effect in
- * development collapses to one call.
+ * `AbortController` bookkeeping is unchanged from the account client this
+ * replaced: `refresh` aborts any in-flight probe before starting a new one, so
+ * React StrictMode's double effect in development collapses to one call.
  */
 
 import { create } from "zustand";
@@ -97,18 +97,22 @@ export const useSession = create<SessionState>((set, get) => ({
     // first also means the epoch has already advanced by the time the remote
     // attempt runs, so a response that arrives late cannot be attributed to
     // the session being ended.
+    //
+    // The previous ordering — await the service, then clear — meant a hung
+    // endpoint left the user signed in locally forever, with no way to retry
+    // because the button had already been pressed.
     get()._bootstrap?.abort();
     applyOwnership(null);
     set({ status: "anon", user: null, _bootstrap: undefined });
 
     // ── Then the remote revoke, best effort and not awaited ───────────────
     //
-    // There is nothing useful to do with the outcome here. Clearing a session
-    // cookie is the server's job, and whether it succeeded is settled by the
-    // next probe, not by this call. Awaiting it would reintroduce exactly the
+    // Base has nothing it can do with the outcome. Clearing the session cookie
+    // is the server's job, and whether it succeeded is settled by the next
+    // probe, not by this call. Awaiting it would reintroduce exactly the
     // coupling the seam exists to remove, and would make the returned promise
     // — which a caller may well be awaiting behind a button — pending on a
-    // network the local reader does not depend on.
+    // network the base line does not depend on.
     //
     // `callAdapter` contains a synchronous throw as well as a rejection, so
     // neither can surface as an unhandled rejection after the local state is

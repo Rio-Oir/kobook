@@ -1,0 +1,19 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+	storage file_system {
+		root .tools/caddy/storage
+	}
+}
+http://127.0.0.1:8080 {
+	bind 127.0.0.1
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8787 {
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy 127.0.0.1:5173
+	}
+}

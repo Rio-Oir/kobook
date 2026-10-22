@@ -6,19 +6,19 @@
 /**
  * The API error shape and the one HTTP helper every client shares.
  *
- * This used to live inside the account client, which made that client the
- * de-facto owner of the error contract for the whole frontend — every other
- * client imported `ApiRequestError` from it, so removing the account client
- * would have taken the error type with it. It is its own module now: this
- * application owns the error contract, and the optional cloud adapter
+ * This used to live in `auth-client.ts`, which made the account client the
+ * de-facto owner of the error contract for the whole frontend — `articles.ts`
+ * and `notes.ts` both imported `ApiRequestError` from it, so removing the
+ * account client would have taken the error type with it. It is its own
+ * module now: base owns the error contract, and the optional cloud adapter
  * (see `cloud/contract.ts`) consumes it rather than owning it.
  *
  * Two error shapes must both be handled. `/api/*` uses the shared error
- * contract (`{ error: { code, message, requestId } }`); an external account
+ * contract (`{ error: { code, message, requestId } }`); an external auth
  * service returns its native shape (`{ message, code? }`). `normalizeApiError`
  * handles both, so callers only ever see a single `ApiRequestError` whose
- * `code` is either a shared `ApiErrorCode`, an error code the remote service
- * defined, or a numeric status fallback.
+ * `code` is either a shared `ApiErrorCode`, a vendor `BASE_ERROR_CODES`
+ * string, or a numeric status fallback.
  *
  * User-displayable copy is in Simplified Chinese like the rest of the UI.
  */
@@ -57,6 +57,17 @@ function defaultMessageFor(status: number): string {
   return "操作失败，请稍后再试。";
 }
 
+/**
+ * 一个没有任何说明的 404/405，不是"这个接口里没有这条记录"。
+ *
+ * 本服务的 404 永远带信封（`{ error: { code, message, requestId } }`），所以
+ * 没有 message 的 404 一定是别的东西在回答这个地址——只渲染页面的开发端口、
+ * 纯静态预览、没有上游的反向代理。这时说"资源不存在。"会把读者引向"记录不见
+ * 了"，而真正不见的是后端；把真正的问题说出来。
+ */
+const NO_API_UPSTREAM =
+  "接口服务未连通：这个地址没有转发 /api 请求，请改用带后端的入口（开发环境是 http://127.0.0.1:8080）打开。";
+
 export async function normalizeApiError(response: Response): Promise<ApiRequestError> {
   let body: ApiErrorEnvelope = {};
   try {
@@ -73,9 +84,19 @@ export async function normalizeApiError(response: Response): Promise<ApiRequestE
   const sharedMessage = sharedError?.message;
   const nativeMessage = body.message;
   const nativeCode = body.code;
+  // 只有真的有一句话时才算"接口答复了"；空体、HTML、裸 404 都算没答。
+  const explained =
+    (typeof sharedMessage === "string" && sharedMessage.length > 0) ||
+    (typeof nativeMessage === "string" && nativeMessage.length > 0);
+  const status = response.status;
+  const message = explained
+    ? ((sharedMessage ?? nativeMessage) as string)
+    : status === 404 || status === 405
+      ? NO_API_UPSTREAM
+      : defaultMessageFor(status);
   return new ApiRequestError(
-    sharedMessage ?? nativeMessage ?? defaultMessageFor(response.status),
-    response.status,
+    message,
+    status,
     sharedCode ?? nativeCode,
     sharedError?.requestId,
   );

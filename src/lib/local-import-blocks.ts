@@ -33,11 +33,11 @@
  *   - `crypto.subtle` is unavailable on non-secure origins, which would make
  *     a `http://` local deployment silently unable to parse anything.
  *
- * The rules the two implementations must not regress:
+ * The rules that matter for the audit findings this phase must not regress:
  *
  *  - There is NO minimum-length filter. The old frontend parser dropped every
  *    block shorter than 20 characters, which deleted short Chinese
- *    paragraphs and most headings. A block is retained whenever
+ *    paragraphs and most headings (audit P1#3). A block is retained whenever
  *    it has non-whitespace content after normalisation, however short.
  *  - Block ids embed the 1-based index, so two blocks with identical text
  *    are still distinguishable (needed for duplicate-paragraph anchoring).
@@ -64,10 +64,7 @@ import { canonicalizeSpans, spansAreSound, type RawMark } from "./local-import-i
  * which is why `tests/unit/local-import-parse.test.ts` asserts equality with
  * `server/src/lib/parse/blocks.ts` rather than just checking a literal here.
  */
-// Kept byte-identical to the server's value: the two pipelines have to be
-// interchangeable, and `tests/unit/local-import-parse.test.ts` asserts it. The
-// value is persisted in every parsed document, so it is not respelled here.
-export const EXTRACTOR_VERSION = "phase1.2";
+export const EXTRACTOR_VERSION = "phase1.3";
 
 // ── SHA-256 ───────────────────────────────────────────────────────────────
 // A direct implementation of FIPS 180-4 §6.2. Round constants are the first
@@ -353,6 +350,17 @@ export interface AddBlockOptions {
   level?: number;
   lang?: string | null;
   ordered?: boolean;
+  /** Image metadata, only applied when `type` is `image`. */
+  src?: string;
+  alt?: string;
+  title?: string;
+  /** Table cells (first row is the header), only applied when `type` is `table`. */
+  rows?: string[][];
+  /** List nesting depth (0-based), only applied when `type` is `listItem`. */
+  depth?: number;
+  /** Task-list state, only applied when `type` is `listItem`. */
+  task?: boolean;
+  checked?: boolean;
   /**
    * Emphasis found in the source, as offsets onto the *raw* text passed to
    * `add` — before normalisation. Callers only supply these when the raw
@@ -388,7 +396,18 @@ export class BlockCollector {
     };
     if (type === "heading") block.level = opts.level ?? 1;
     if (type === "code") block.lang = opts.lang ?? null;
-    if (type === "listItem") block.ordered = opts.ordered ?? false;
+    if (type === "listItem") {
+      block.ordered = opts.ordered ?? false;
+      block.depth = opts.depth ?? 0;
+      if (opts.task) {
+        block.task = true;
+        block.checked = opts.checked ?? false;
+      }
+    }
+    if (type === "image" && opts.src) block.src = opts.src;
+    if (type === "image" && opts.alt) block.alt = opts.alt;
+    if (type === "image" && opts.title) block.title = opts.title;
+    if (type === "table" && opts.rows && opts.rows.length > 0) block.rows = opts.rows;
     if (measured && marks && marks.length > 0) {
       const spans = shiftSpans(marks, measured.map, normalized.length);
       // Drop rather than repair. Emphasis that cannot be located exactly is
