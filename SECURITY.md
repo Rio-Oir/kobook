@@ -5,8 +5,8 @@
 Please report suspected vulnerabilities **privately**:
 
 - Prefer [GitHub's private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
-  once it is enabled on the repository (Security → Advisories → "Report a
-  vulnerability"). Reports filed that way stay private until an advisory is
+  (Security → Advisories → "Report a vulnerability"), which is enabled for this
+  repository. Reports filed that way stay private until an advisory is
   published.
 - If that channel is not available, email **`a1458367843@gmail.com`**
   (<mailto:a1458367843@gmail.com>).
