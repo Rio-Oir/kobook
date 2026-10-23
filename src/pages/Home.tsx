@@ -298,18 +298,21 @@ export default function Home() {
           {modelInfo.hasKey && (
             <>
               <span className="text-gloss-textDim ml-3">·</span>
-              <span className="text-gloss-textDim ml-3">
-              <>
-                <span className="text-gloss-accent">♥</span>{" "}
+              <span className="ml-3 inline-flex items-center gap-3">
                 <span className="text-gloss-textDim">{modelInfo.name}</span>
+                {/* Endpoint state as a lamp, not a bullet: no glyph, a gap from
+                    the name, and a hairline halo so it reads as a small light
+                    rather than punctuation stuck to the text. */}
                 <span
-                  className={modelInfo.endpointConfirmed ? "text-emerald-500" : "text-amber-500"}
+                  role="img"
+                  className={
+                    modelInfo.endpointConfirmed
+                      ? "inline-block size-1.5 shrink-0 rounded-full bg-emerald-500 ring-[3px] ring-emerald-500/15"
+                      : "inline-block size-1.5 shrink-0 rounded-full bg-amber-500 ring-[3px] ring-amber-500/15"
+                  }
                   title={modelInfo.endpointConfirmed ? "已确认端点" : "需要确认端点"}
                   aria-label={modelInfo.endpointConfirmed ? "已确认端点" : "需要确认端点"}
-                >
-                  {modelInfo.endpointConfirmed ? "●" : "○"}
-                </span>
-              </>
+                />
               </span>
             </>
           )}
