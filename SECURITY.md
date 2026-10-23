@@ -2,14 +2,15 @@
 
 ## Reporting a vulnerability
 
-Please report suspected vulnerabilities **privately**:
+Please report suspected vulnerabilities **privately** through
+[GitHub's private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
+(Security → Advisories → "Report a vulnerability"). Reports filed that way stay
+private until an advisory is published.
 
-- Prefer [GitHub's private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
-  (Security → Advisories → "Report a vulnerability"), which is enabled for this
-  repository. Reports filed that way stay private until an advisory is
-  published.
-- If that channel is not available, email **`a1458367843@gmail.com`**
-  (<mailto:a1458367843@gmail.com>).
+Private vulnerability reporting has to be enabled in the repository settings
+before it can receive reports. If the button is not there, open an issue asking
+the maintainers to enable it — without any exploit detail — and wait for a
+private channel before sending the technical content.
 
 Two honest caveats:
 
@@ -201,7 +202,9 @@ are a snapshot; run `npm audit --registry=https://registry.npmjs.org` yourself.
 - **Deployment configuration is the operator's responsibility.** SMTP/SMS
   transports, secrets, the database and the reverse proxy are configured by
   whoever runs the instance; this repository only refuses to start a production
-  service with a missing or unsafe transport.
+  service with a missing or unsafe transport. It also binds loopback only and
+  trusts loopback origins only, so a public instance needs the deployment-phase
+  bind/origin changes first.
 - **This code has not been through an independent security review.** The
   guarantees above are properties of the implementation and are covered by
   tests, not by a third-party assessment.

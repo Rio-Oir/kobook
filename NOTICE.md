@@ -33,9 +33,11 @@ dispositions for each such package, with the evidence:
 
 A declared SPDX identifier alone does not supply missing copyright or license
 text. **`npm run notices` succeeding means every lockfile entry has a
-disposition — it does not mean every license text is present.** The two
-`declared-only` entries are real licensing gaps: resolve them, or accept them
-knowingly, before distributing.
+disposition — it does not mean every license text is present.** The inventory
+records two `declared-only` entries and, separately, ten packages that ship no
+license text and have no recorded disposition (listed at the end of
+`THIRD_PARTY_NOTICES.md`). Both groups are real licensing gaps: resolve them, or
+accept them knowingly, before distributing.
 
 ## Platform-specific packages that are not installed here
 

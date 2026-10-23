@@ -93,7 +93,7 @@ export function loadEnvFileOnce(): void {
   envFileLoaded = true;
 
   // Tests must be hermetic. A developer's `.env` may point mail at a real
-  // SMTP account (this machine's does); letting the integration suites read it
+  // SMTP account; letting the integration suites read it
   // would make them send real mail and would make the in-memory outbox
   // assertions depend on whatever is on disk. The test harness passes every
   // value it needs explicitly, and `NODE_ENV=test` is set before this runs.

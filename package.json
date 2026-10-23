@@ -5,6 +5,14 @@
   "type": "module",
   "license": "MPL-2.0",
   "description": "A local-first Chinese reader: import links and documents, read, highlight, ask your own model, and optionally sync across devices. No billing.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rio-Oir/kobook.git"
+  },
+  "homepage": "https://github.com/Rio-Oir/kobook#readme",
+  "bugs": {
+    "url": "https://github.com/Rio-Oir/kobook/issues"
+  },
   "scripts": {
     "pdfjs:assets": "node scripts/pdfjs-assets.mjs",
     "predev": "npm run pdfjs:assets",
@@ -16,6 +24,7 @@
     "typecheck:server": "tsc -p server/tsconfig.json --noEmit",
     "typecheck:tests": "tsc -p tests/tsconfig.json --noEmit",
     "typecheck:base-tests": "tsc -p apps/reader-release/tsconfig.base-tests.json --noEmit",
+    "pretypecheck": "prisma generate",
     "typecheck": "npm run typecheck:frontend && npm run typecheck:server && npm run typecheck:tests",
     "test:unit": "node --import tsx --test \"tests/unit/*.test.ts\"",
     "test:unit:byok": "node --import tsx --test \"tests/unit/byok-*.test.ts\"",

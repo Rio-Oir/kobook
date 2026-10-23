@@ -1,0 +1,58 @@
+name: Bug report
+description: Something behaves differently from what the documentation says.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please keep it reproducible and free of personal
+        data, credentials or third-party confidential material.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: A minimal sequence, with synthetic content where possible.
+      placeholder: |
+        1. Open ...
+        2. Import ...
+        3. Select ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: The tag or commit you are running (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Reader / typography
+        - Import (file, paste, URL)
+        - Highlights / notes
+        - Library / covers
+        - BYOK / model calls
+        - Accounts / sync
+        - Build / tests
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste only the lines that matter, with secrets and personal data removed.
+      render: text
+    validations:
+      required: false

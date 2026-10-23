@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a change in behaviour or a new capability.
+title: "[feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the problem before the solution. This project is
+        local-first: reading, saving, highlighting, annotating, backing up and
+        restoring must keep working with no account, no network and no database.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard or impossible today, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: What should happen instead? Include the failure cases you care about.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds, or a smaller change that would also help.
+    validations:
+      required: false
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Local-first constraints
+      options:
+        - label: The feature can work with no account and no server.
+          required: false

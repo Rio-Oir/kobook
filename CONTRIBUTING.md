@@ -22,7 +22,7 @@ have working local defaults).
 ## What to run before calling a change done
 
 ```bash
-npm run typecheck           # frontend, server and tests
+npm run typecheck           # frontend, server and tests (generates the Prisma client first)
 npm run test:unit
 npm run acceptance:base     # adds the production build, the service tests, a real browser
 ```
@@ -44,7 +44,7 @@ instead of a fail-fast stop.
 
 Touch these areas and a run should also include `npm run test:browser:byok`:
 
-* `src/lib/ai.ts`, `src/lib/settings.ts`, `src/components/SettingsPanel.tsx`
+* `src/lib/ai.ts`, `src/lib/settings.ts`, `src/components/SettingsView.tsx`
 * anything that builds or mutates a request body
 
 ## What a change needs to include
@@ -118,5 +118,5 @@ rejected regardless of what else it improves.
 
 ## Reporting a security issue
 
-Report it privately to the mailbox in `SECURITY.md` — do not open a public
-issue containing exploit details.
+Report it privately through GitHub's private vulnerability reporting — see
+`SECURITY.md`. Do not open a public issue containing exploit details.
