@@ -139,5 +139,6 @@ under the same terms — see [`docs/ASSETS.md`](docs/ASSETS.md).
 The name has not been trademark-cleared; the checks are recorded in
 [`docs/NAME-SEARCH.md`](docs/NAME-SEARCH.md).
 
-Contributions: [`CONTRIBUTING.md`](CONTRIBUTING.md). Security reports:
-[`SECURITY.md`](SECURITY.md).
+Contributions are accepted under MPL-2.0 — open an issue or a pull request.
+Security reports: use the repository's **Security** tab (private vulnerability
+reporting); do not open a public issue with exploit details.
