@@ -134,6 +134,8 @@ origin.
 This project's own source and documentation are **MPL-2.0** — see `LICENSE`.
 Third-party texts are reproduced under `licenses/` and listed in
 `THIRD_PARTY_NOTICES.md`; run `npm run notices` after changing dependencies.
+The bundled illustrations and the project marks are original work released
+under the same terms — see [`docs/ASSETS.md`](docs/ASSETS.md).
 The name has not been trademark-cleared; the checks are recorded in
 [`docs/NAME-SEARCH.md`](docs/NAME-SEARCH.md).
 
