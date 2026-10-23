@@ -7,59 +7,9 @@ read it with the layout and theme you like; select any passage to get an
 explanation or ask a follow-up question; keep highlights and notes; back
 everything up to a file; and keep reading when the network is gone.
 
-Reading works with **no account and no server**. Signed-in accounts add cloud
-sync across devices, and URL extraction can use the bundled service. Model calls
-use *your* key, which the browser sends directly to the endpoint you configure —
-never through this project's server.
-
-## This repository's role
-
-This is the **open-source line**: the reader, the optional service and the
-release build, with nothing about a particular operator — no terms of service,
-no privacy policy, no filing numbers, no domain, no analytics ID. A public
-instance is run by whoever deploys it, and that operator needs its own terms,
-privacy policy and filings.
-
-One current limit: this snapshot is **loopback-only**. The service refuses a
-non-loopback bind, and the auth origin check accepts loopback origins only, so a
-public deployment needs the deployment-phase bind/origin changes before it can
-serve accounts off the machine.
-
-The tree is exported from the maintainers' private deployment tree with that
-material removed. Changes flow one way: the private tree is canonical, this
-repository receives exported snapshots.
-
-## What it does
-
-- **Import** — paste a link, text or HTML; local files: PDF, EPUB, DOCX, HTML,
-  Markdown, TXT. Local files never leave the device.
-- **Read** — typography, outline, day/night themes, side panels, a draggable
-  measure, inline Markdown styles, in-place editing.
-- **Annotate** — highlights (colour, shape, note), notes, multi-turn Q&A, and a
-  notebook that gathers them per article.
-- **Library** — cover grid, category and tag filters, title search, model-written
-  summaries.
-- **AI** — bring your own key: any OpenAI-compatible endpoint, called from the
-  browser. Nothing is proxied through this project.
-- **Accounts (optional)** — email + password, email code, or phone code. Signing
-  in syncs articles, notes, highlights, tags, summaries and covers; an anonymous
-  workspace can be migrated at sign-in.
-- **Offline** — service worker + IndexedDB; previously opened articles stay
-  readable with the network down.
-- **Backup** — a whitelisted JSON export/import; keys and account data are not
-  included.
-
-## What is in this repository
-
-| Area | Where |
-| --- | --- |
-| Reading UI, local storage, import, notes, BYOK | `src/` |
-| HTTP service: Fastify, Better Auth, Prisma routes | `server/` |
-| Shared request/response contracts | `shared/contracts/` |
-| Small reusable modules (phone OTP) | `modules/` |
-| Deployable reader build and its gates | `apps/reader-release/` |
-| Unit, integration and browser suites | `tests/` |
-| Name-search record | `docs/` |
+Signed-in accounts add cloud sync across devices, and URL extraction can use
+the bundled service. Model calls use *your* key, which the browser sends
+directly to the endpoint you configure — never through this project's server.
 
 ![The library](docs/images/library.jpg)
 ![The reader](docs/images/reader.jpg)
@@ -74,8 +24,8 @@ npm run dev          # http://127.0.0.1:5173
 ```
 
 That is enough to import files or pasted text, read, and keep notes. URL
-extraction, accounts and cloud sync need the service below; without it the app
-keeps working locally.
+extraction, accounts and cloud sync need the optional service below; without
+it the app keeps working locally.
 
 ### Optional service
 
@@ -121,13 +71,6 @@ npm run build:release  # deployable reader → apps/reader-release/dist (served 
 built shell served from a single process. Serving `apps/reader-release/dist`
 from any static host under `/reader/` works too, with the API behind the same
 origin.
-
-## What is not here
-
-- Billing, subscriptions, entitlements and platform-paid model calls. The line
-  is payment; accounts and sync are part of this product.
-- Terms of service, privacy policy and regulatory filings. If you run a public
-  instance you are its operator and need your own.
 
 ## License
 
