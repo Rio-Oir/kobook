@@ -7,10 +7,10 @@ Please report suspected vulnerabilities **privately** through
 (Security → Advisories → "Report a vulnerability"). Reports filed that way stay
 private until an advisory is published.
 
-Private vulnerability reporting has to be enabled in the repository settings
-before it can receive reports. If the button is not there, open an issue asking
-the maintainers to enable it — without any exploit detail — and wait for a
-private channel before sending the technical content.
+Private vulnerability reporting is enabled for this repository. If the button
+is not there, open an issue asking the maintainers to enable it — without any
+exploit detail — and wait for a private channel before sending the technical
+content.
 
 Two honest caveats:
 
